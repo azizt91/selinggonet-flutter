@@ -1,0 +1,8 @@
+{
+  "appId": "com.selinggonet.ispmgmt",
+  "appName": "Selinggonet",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

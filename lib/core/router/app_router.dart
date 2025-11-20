@@ -20,6 +20,9 @@ import '../../features/admin/settings/presentation/pages/advanced_settings_page.
 import '../../features/customer/dashboard/presentation/pages/customer_dashboard_page.dart';
 import '../../features/customer/profile/presentation/pages/customer_profile_page.dart';
 import '../../features/customer/invoices/presentation/pages/customer_invoices_page.dart';
+import '../../features/customer/help/presentation/pages/help_page.dart';
+import '../../features/customer/help/presentation/pages/faq_wifi_modem_page.dart';
+import '../../features/customer/help/presentation/pages/tutorial_ganti_wifi_page.dart';
 import '../../features/customer/wifi/presentation/pages/wifi_settings_page.dart';
 import '../../features/customer/payment_info/presentation/pages/payment_info_page.dart';
 import '../../data/providers/auth_provider.dart';
@@ -167,10 +170,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/customer/invoices',
-        builder: (context, state) => CustomerScaffold(
-          currentRoute: state.matchedLocation,
-          child: const CustomerInvoicesPage(),
-        ),
+        builder: (context, state) {
+          final tab = state.uri.queryParameters['tab'];
+          final invoiceId = state.uri.queryParameters['invoiceId'];
+          final initialTabIndex = tab != null ? int.tryParse(tab) ?? 0 : 0;
+          return CustomerScaffold(
+            currentRoute: state.matchedLocation,
+            child: CustomerInvoicesPage(
+              initialTabIndex: initialTabIndex,
+              highlightInvoiceId: invoiceId,
+            ),
+          );
+        },
       ),
       GoRoute(
         path: '/customer/payment-info',
@@ -178,6 +189,21 @@ final routerProvider = Provider<GoRouter>((ref) {
           currentRoute: state.matchedLocation,
           child: const PaymentInfoPage(),
         ),
+      ),
+      GoRoute(
+        path: '/customer/help',
+        builder: (context, state) => CustomerScaffold(
+          currentRoute: state.matchedLocation,
+          child: const HelpPage(),
+        ),
+      ),
+      GoRoute(
+        path: '/customer/help/faq-wifi-modem',
+        builder: (context, state) => const FaqWifiModemPage(),
+      ),
+      GoRoute(
+        path: '/customer/help/tutorial-ganti-wifi',
+        builder: (context, state) => const TutorialGantiWifiPage(),
       ),
       GoRoute(
         path: '/customer/wifi',

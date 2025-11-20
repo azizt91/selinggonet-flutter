@@ -40,7 +40,7 @@ class CustomerRepository {
     try {
       var queryBuilder = _supabase
           .from('profiles')
-          .select('*, packages!profiles_package_id_fkey(name, price, speed)')
+          .select('*, packages(name, price, speed)')
           .eq('role', 'USER');
 
       // Apply search filter
@@ -121,7 +121,7 @@ class CustomerRepository {
     try {
       final response = await _supabase
           .from('profiles')
-          .select('*, packages!profiles_package_id_fkey(name, price, speed)')
+          .select('*, packages(name, price, speed)')
           .eq('id', id)
           .single();
 
@@ -201,7 +201,7 @@ class CustomerRepository {
           .from('profiles')
           .update(updates)
           .eq('id', id)
-          .select('*, packages!profiles_package_id_fkey(name, price, speed)')
+          .select('*, packages(name, price, speed)')
           .single();
 
       return ProfileModel.fromJson(response);

@@ -25,6 +25,7 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   File? _selectedImage;
+  String? _uploadedPhotoUrl;
 
   @override
   void dispose() {
@@ -40,217 +41,22 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
     final userAsync = ref.watch(currentUserProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Profile' : 'Profile'),
-        actions: [
-          if (!_isEditing)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                setState(() {
-                  _isEditing = true;
-                });
-              },
-            ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout,
-          ),
-        ],
-      ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: userAsync.when(
         data: (user) {
-          if (!_isEditing && _fullNameController.text.isEmpty) {
-            _fullNameController.text = user?.fullName ?? '';
-            _emailController.text = user?.email ?? '';
-            _whatsappController.text = user?.phone ?? '';
+          if (user == null) {
+            return const Center(child: Text('User not found'));
           }
 
-          return Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Avatar with photo upload
-                Center(
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 60,
-                        backgroundColor: AppColors.primary,
-                        backgroundImage: (user?.photoUrl != null && user!.photoUrl!.isNotEmpty)
-                            ? NetworkImage(user.photoUrl!) as ImageProvider
-                            : _selectedImage != null
-                                ? FileImage(_selectedImage!) as ImageProvider
-                                : null,
-                        child: (user?.photoUrl == null || user!.photoUrl!.isEmpty) && _selectedImage == null
-                            ? Text(
-                                user?.fullName?.substring(0, 1).toUpperCase() ?? 'U',
-                                style: const TextStyle(
-                                  fontSize: 40,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : null,
-                      ),
-                      if (_isEditing)
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: CircleAvatar(
-                            radius: 20,
-                            backgroundColor: AppColors.primary,
-                            child: IconButton(
-                              icon: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
-                              onPressed: _pickImage,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Center(
-                  child: Text(
-                    user?.fullName ?? 'Pelanggan',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Center(
-                  child: Text(
-                    user?.email ?? '',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ),
-                const SizedBox(height: 24),
+          // Initialize controllers
+          if (!_isEditing && _fullNameController.text.isEmpty) {
+            _fullNameController.text = user.fullName ?? '';
+            _emailController.text = user.email ?? '';
+            _whatsappController.text = user.whatsappNumber ?? '';
+          }
 
-                if (!_isEditing) ...[
-                  // View Mode
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.badge),
-                      title: const Text('ID Pelanggan'),
-                      subtitle: Text(user?.idpl ?? '-'),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.phone),
-                      title: const Text('WhatsApp'),
-                      subtitle: Text(user?.phone ?? '-'),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // WiFi Settings Card
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.wifi, color: AppColors.primary),
-                      title: const Text('Pengaturan WiFi'),
-                      subtitle: const Text('Ganti SSID & Password'),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () => context.push('/customer/wifi'),
-                    ),
-                  ),
-                ] else ...[
-                  // Edit Mode
-                  TextFormField(
-                    controller: _fullNameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nama Lengkap',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.person),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Nama tidak boleh kosong';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.email),
-                    ),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Email tidak boleh kosong';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Email tidak valid';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _whatsappController,
-                    decoration: const InputDecoration(
-                      labelText: 'WhatsApp',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.phone),
-                      hintText: '08123456789',
-                    ),
-                    keyboardType: TextInputType.phone,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordController,
-                    decoration: InputDecoration(
-                      labelText: 'Password Baru (opsional)',
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.lock),
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                        onPressed: () {
-                          setState(() => _obscurePassword = !_obscurePassword);
-                        },
-                      ),
-                      hintText: 'Kosongkan jika tidak ingin mengubah',
-                    ),
-                    obscureText: _obscurePassword,
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Save & Cancel Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _isLoading ? null : _cancelEdit,
-                          child: const Text('Batal'),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _saveProfile,
-                          child: _isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('Simpan'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-                
-                const SizedBox(height: 80),
-              ],
-            ),
+          return SafeArea(
+            child: _isEditing ? _buildEditView(user) : _buildProfileView(user),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -259,18 +65,624 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
     );
   }
 
-  Future<void> _pickImage() async {
+  Widget _buildProfileView(user) {
+    return Column(
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Text(
+                'Profile',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF110E1B),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 16),
+                
+                // Avatar with edit button
+                GestureDetector(
+                  onTap: () async {
+                    await _pickAndUploadImage(user);
+                  },
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 128,
+                        height: 128,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.grey[300],
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: _buildAvatarContent(user),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 4,
+                        right: 4,
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.edit,
+                            size: 18,
+                            color: Color(0xFF625095),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Name and Email
+                Text(
+                  user.fullName ?? 'Pelanggan',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF110E1B),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  user.email ?? '',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF625095),
+                  ),
+                ),
+                
+                const SizedBox(height: 32),
+                
+                // Menu Items
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    children: [
+                      _buildMenuItem(
+                        icon: Icons.edit,
+                        title: 'Edit Profile',
+                        onTap: () {
+                          setState(() {
+                            _isEditing = true;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildMenuItem(
+                        icon: Icons.wifi,
+                        title: 'Pengaturan WiFi',
+                        onTap: () {
+                          context.push('/customer/wifi');
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Logout Button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: _handleLogout,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Logout',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 100),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditView(user) {
+    return Column(
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: () {
+                  if (_isLoading) return;
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Batalkan Perubahan?'),
+                      content: const Text('Perubahan yang belum disimpan akan hilang.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Tidak'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _cancelEdit();
+                          },
+                          child: const Text('Ya'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF110E1B)),
+              ),
+              const Expanded(
+                child: Text(
+                  'Edit Profile',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF110E1B),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 40),
+            ],
+          ),
+        ),
+
+        Expanded(
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Full Name
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Nama Lengkap',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF110E1B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _fullNameController,
+                      decoration: InputDecoration(
+                        hintText: 'Masukkan nama lengkap',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFD6D0E7)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFD6D0E7)),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.all(12),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Nama tidak boleh kosong';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Email (Read-only)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Email',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF110E1B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFD6D0E7)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFD6D0E7)),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        contentPadding: const EdgeInsets.all(12),
+                      ),
+                      readOnly: true,
+                      enabled: false,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Email tidak dapat diubah.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[400],
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Password
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Password Baru',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF110E1B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        hintText: 'Kosongkan jika tidak ingin mengubah',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFD6D0E7)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFD6D0E7)),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.all(12),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // WhatsApp
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Nomor WhatsApp',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF110E1B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _whatsappController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        hintText: '08123456789',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFD6D0E7)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFD6D0E7)),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.all(12),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 48,
+                        child: OutlinedButton(
+                          onPressed: _isLoading ? null : () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Batalkan Perubahan?'),
+                                content: const Text('Perubahan yang belum disimpan akan hilang.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Tidak'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      _cancelEdit();
+                                    },
+                                    child: const Text('Ya'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFFD6D0E7)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'CANCEL',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF110E1B),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _saveProfile,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'SIMPAN',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 100),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAvatarContent(user) {
+    final photoUrl = _uploadedPhotoUrl ?? user.photoUrl;
+    
+    if (photoUrl != null && photoUrl.isNotEmpty && photoUrl.startsWith('http')) {
+      return Image.network(
+        photoUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _buildInitialsAvatar(user);
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const Center(
+            child: CircularProgressIndicator(strokeWidth: 2),
+          );
+        },
+      );
+    }
+    
+    return _buildInitialsAvatar(user);
+  }
+
+  Widget _buildInitialsAvatar(user) {
+    final initials = (user.fullName ?? 'P').substring(0, 1).toUpperCase();
+    return Container(
+      color: const Color(0xFF6A5ACD),
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            fontSize: 48,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.grey[500]),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF110E1B),
+                ),
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey[400]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadImage(user) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(
       source: ImageSource.gallery,
       maxWidth: 512,
       maxHeight: 512,
+      imageQuality: 85,
     );
 
-    if (pickedFile != null) {
+    if (pickedFile == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final supabase = Supabase.instance.client;
+      final bytes = await File(pickedFile.path).readAsBytes();
+      final fileExt = pickedFile.path.split('.').last;
+      final fileName = '${user.id}-${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+      
+      // Upload to Supabase Storage
+      await supabase.storage
+          .from('avatars')
+          .uploadBinary(fileName, bytes, fileOptions: const FileOptions(upsert: true));
+
+      final photoUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
+
+      // Update profile
+      await supabase.from('profiles').update({
+        'photo_url': photoUrl,
+      }).eq('id', user.id);
+
       setState(() {
-        _selectedImage = File(pickedFile.path);
+        _uploadedPhotoUrl = photoUrl;
       });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto profil berhasil diperbarui'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        ref.invalidate(currentUserProvider);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengunggah foto: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -281,7 +693,7 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
       _selectedImage = null;
       _fullNameController.text = user?.fullName ?? '';
       _emailController.text = user?.email ?? '';
-      _whatsappController.text = user?.phone ?? '';
+      _whatsappController.text = user?.whatsappNumber ?? '';
       _passwordController.text = '';
     });
   }
@@ -296,37 +708,17 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
       final user = ref.read(currentUserProvider).value;
       if (user == null) return;
 
-      String? photoUrl = user.photoUrl;
-
-      // Upload photo if selected
-      if (_selectedImage != null) {
-        final bytes = await _selectedImage!.readAsBytes();
-        final fileExt = _selectedImage!.path.split('.').last;
-        final fileName = '${user.id}-${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-        
-        await supabase.storage
-            .from('avatars')
-            .uploadBinary(fileName, bytes, fileOptions: const FileOptions(upsert: true));
-
-        photoUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
-      }
-
       // Update profile
       await supabase.from('profiles').update({
         'full_name': _fullNameController.text.trim(),
         'whatsapp_number': _whatsappController.text.trim(),
-        if (photoUrl != null) 'photo_url': photoUrl,
       }).eq('id', user.id);
 
-      // Update email/password if changed
-      if (_emailController.text.trim() != user.email ||
-          _passwordController.text.isNotEmpty) {
+      // Update password if provided
+      if (_passwordController.text.isNotEmpty) {
         await supabase.auth.updateUser(
           UserAttributes(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.isNotEmpty
-                ? _passwordController.text
-                : null,
+            password: _passwordController.text,
           ),
         );
       }
@@ -374,6 +766,9 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+            ),
             child: const Text('Logout'),
           ),
         ],

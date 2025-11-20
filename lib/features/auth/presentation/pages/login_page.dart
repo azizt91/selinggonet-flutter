@@ -88,8 +88,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   _buildLoginForm(),
                   const SizedBox(height: 24),
 
-                  // Register Link
-                  _buildRegisterLink(),
                 ],
               ),
             ),
@@ -110,11 +108,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             return Transform.scale(
               scale: value,
               child: Container(
-                width: 100,
-                height: 100,
+                width: 120,
+                height: 120,
+                padding: const EdgeInsets.all(20), // Padding to make logo smaller inside circle
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
+                  shape: BoxShape.circle, // Circular shape
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.2),
@@ -123,19 +122,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                   ],
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(25),
-                  child: Image.asset(
-                    'assets/images/logo.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.wifi,
-                        size: 50,
-                        color: Color(0xFF667EEA),
-                      );
-                    },
-                  ),
+                child: Image.asset(
+                  'assets/images/sn-blue.png',
+                  fit: BoxFit.contain, // Contain to respect padding
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.wifi,
+                      size: 50,
+                      color: Color(0xFF667EEA),
+                    );
+                  },
                 ),
               ),
             );
@@ -305,25 +301,4 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
-  Widget _buildRegisterLink() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text(
-          'Belum punya akun admin? ',
-          style: TextStyle(color: Colors.white70),
-        ),
-        TextButton(
-          onPressed: () => context.push('/register'),
-          child: const Text(
-            'Daftar Sekarang',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }

@@ -165,7 +165,12 @@ class DashboardRepository {
       return DashboardChartsData(
         labels: [],
         revenueData: [],
-        customerData: [],
+        expensesData: [],
+        profitData: [],
+        customerGrowthData: [],
+        customerTotalData: [],
+        customerNetData: [],
+        invoiceStatusCounts: {},
       );
     }
   }

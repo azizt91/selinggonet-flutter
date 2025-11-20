@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'package_model.dart';
 
 part 'profile_model.g.dart';
 
@@ -58,6 +59,9 @@ class ProfileModel extends HiveObject {
   @HiveField(17)
   final String? email;
 
+  @HiveField(18)
+  final PackageModel? package;
+
   ProfileModel({
     required this.id,
     this.idpl,
@@ -77,6 +81,7 @@ class ProfileModel extends HiveObject {
     this.latitude,
     this.longitude,
     this.email,
+    this.package,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
@@ -105,6 +110,9 @@ class ProfileModel extends HiveObject {
       latitude: json['latitude'] as double?,
       longitude: json['longitude'] as double?,
       email: json['email'] as String?,
+      package: json['packages'] != null
+          ? PackageModel.fromJson(json['packages'] as Map<String, dynamic>)
+          : null,
     );
   }
 

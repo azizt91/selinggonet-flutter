@@ -15,7 +15,7 @@ class AuthRepository {
       try {
         final response = await _supabase
             .from('profiles')
-            .select()
+            .select('*, packages(*)')
             .eq('id', user.id)
             .single();
 
@@ -45,7 +45,7 @@ class AuthRepository {
       // Fetch profile
       final profileResponse = await _supabase
           .from('profiles')
-          .select()
+          .select('*, packages(*)')
           .eq('id', response.user!.id)
           .single();
 
@@ -90,7 +90,7 @@ class AuthRepository {
       // Fetch created profile
       final profileResponse = await _supabase
           .from('profiles')
-          .select()
+          .select('*, packages(*)')
           .eq('id', response.user!.id)
           .single();
 
@@ -125,7 +125,7 @@ class AuthRepository {
 
       final response = await _supabase
           .from('profiles')
-          .select()
+          .select('*, packages(*)')
           .eq('id', user.id)
           .single();
 

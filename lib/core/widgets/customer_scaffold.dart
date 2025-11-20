@@ -22,7 +22,7 @@ class _CustomerScaffoldState extends State<CustomerScaffold> {
   int _getSelectedIndex() {
     if (widget.currentRoute.contains('/customer/dashboard')) return 0;
     if (widget.currentRoute.contains('/customer/invoices')) return 1;
-    if (widget.currentRoute.contains('/customer/payment-info')) return 2;
+    if (widget.currentRoute.contains('/customer/help')) return 2;
     if (widget.currentRoute.contains('/customer/profile')) return 3;
     return 0;
   }
@@ -43,7 +43,7 @@ class _CustomerScaffoldState extends State<CustomerScaffold> {
               context.go('/customer/invoices');
               break;
             case 2:
-              context.go('/customer/payment-info');
+              context.go('/customer/help');
               break;
             case 3:
               context.go('/customer/profile');
@@ -65,8 +65,8 @@ class _CustomerScaffoldState extends State<CustomerScaffold> {
             label: 'Riwayat',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.payment),
-            label: 'Info Bayar',
+            icon: Icon(Icons.help_outline),
+            label: 'Bantuan',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

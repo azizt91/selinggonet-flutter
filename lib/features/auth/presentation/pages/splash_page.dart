@@ -93,9 +93,10 @@ class _SplashPageState extends ConsumerState<SplashPage>
                   Container(
                     width: 120,
                     height: 120,
+                    padding: const EdgeInsets.all(20), // Padding to make logo smaller inside circle
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
+                      shape: BoxShape.circle, // Circular shape
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.2),
@@ -104,19 +105,16 @@ class _SplashPageState extends ConsumerState<SplashPage>
                         ),
                       ],
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(30),
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(
-                            Icons.wifi,
-                            size: 60,
-                            color: Color(0xFF667EEA),
-                          );
-                        },
-                      ),
+                    child: Image.asset(
+                      'assets/images/sn-blue.png',
+                      fit: BoxFit.contain, // Contain to respect padding
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.wifi,
+                          size: 60,
+                          color: Color(0xFF667EEA),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(height: 24),

@@ -14,14 +14,14 @@ buildscript {
 // Define Flutter properties for plugins
 ext {
     compileSdkVersion = 35
-    minSdkVersion = 21
+    minSdkVersion = 23
     targetSdkVersion = 35
 }
 
 // Create flutter object for plugin compatibility
 ext.flutter = [
     compileSdkVersion: 35,
-    minSdkVersion: 21,
+    minSdkVersion: 23,
     targetSdkVersion: 35,
     ndkVersion: "25.1.8937393"
 ]

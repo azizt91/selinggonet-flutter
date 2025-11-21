@@ -1,14 +1,3 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../../../../../data/models/profile_model.dart';
-import '../../../../../data/providers/payment_provider.dart';
-
-class PaymentModal extends ConsumerStatefulWidget {
-  final double totalAmount;
-  final String periods;
   final String formattedAmount;
   final ProfileModel user;
 
@@ -229,15 +218,34 @@ class _PaymentModalState extends ConsumerState<PaymentModal> with SingleTickerPr
 
 Saya sudah melakukan pembayaran. Mohon untuk diverifikasi. Terima kasih.''';
 
-    // TODO: Get admin number from settings/config
-    final whatsappUrl = Uri.parse('https://wa.me/6281234567890?text=${Uri.encodeComponent(message)}'); 
-    
-    if (await canLaunchUrl(whatsappUrl)) {
-      await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
-    } else {
+    try {
+      final settings = await ref.read(appSettingsProvider.future);
+      final whatsappNumber = settings?.whatsappNumber;
+
+      if (whatsappNumber == null || whatsappNumber.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Nomor WhatsApp admin belum dikonfigurasi')),
+          );
+        }
+        return;
+      }
+
+      await WhatsAppLauncher.launchWhatsApp(
+        phone: whatsappNumber,
+        message: message,
+        onError: (errorMessage) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(errorMessage)),
+            );
+          }
+        },
+      );
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal membuka WhatsApp')),
+          SnackBar(content: Text('Gagal memuat konfigurasi: $e')),
         );
       }
     }

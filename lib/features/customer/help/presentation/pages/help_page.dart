@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../../core/utils/whatsapp_launcher.dart';
+import '../../../../../data/providers/app_settings_provider.dart';
 
-class HelpPage extends StatefulWidget {
+class HelpPage extends ConsumerStatefulWidget {
   const HelpPage({super.key});
 
   @override
-  State<HelpPage> createState() => _HelpPageState();
+  ConsumerState<HelpPage> createState() => _HelpPageState();
 }
 
-class _HelpPageState extends State<HelpPage> {
+class _HelpPageState extends ConsumerState<HelpPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -28,6 +31,41 @@ class _HelpPageState extends State<HelpPage> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  // ... (rest of the code)
+
+  void _launchWhatsApp() async {
+    try {
+      final settings = await ref.read(appSettingsProvider.future);
+      final whatsappNumber = settings?.whatsappNumber;
+
+      if (whatsappNumber == null || whatsappNumber.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Nomor WhatsApp admin belum dikonfigurasi')),
+          );
+        }
+        return;
+      }
+
+      await WhatsAppLauncher.launchWhatsApp(
+        phone: whatsappNumber,
+        onError: (errorMessage) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(errorMessage)),
+            );
+          }
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memuat konfigurasi: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -375,12 +413,7 @@ class _HelpPageState extends State<HelpPage> {
     );
   }
 
-  void _launchWhatsApp() async {
-    final url = Uri.parse('https://wa.me/+6281914170701');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
-  }
+
 
   void _launchPhone() async {
     final url = Uri.parse('tel:+6281914170701');

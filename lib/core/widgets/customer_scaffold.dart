@@ -23,7 +23,9 @@ class _CustomerScaffoldState extends State<CustomerScaffold> {
     if (widget.currentRoute.contains('/customer/dashboard')) return 0;
     if (widget.currentRoute.contains('/customer/invoices')) return 1;
     if (widget.currentRoute.contains('/customer/help')) return 2;
-    if (widget.currentRoute.contains('/customer/profile')) return 3;
+    if (widget.currentRoute.contains('/customer/profile') ||
+        widget.currentRoute.contains('/customer/wifi') ||
+        widget.currentRoute.contains('/customer/payment-info')) return 3;
     return 0;
   }
 

@@ -127,7 +127,7 @@ class InvoiceRepository {
     try {
       final response = await _supabase
           .from('invoices')
-          .select('*, profiles!invoices_customer_id_fkey(full_name, idpl, phone, address)')
+          .select('*, profiles!invoices_customer_id_fkey(full_name, idpl, whatsapp_number, address)')
           .eq('id', id)
           .single();
 

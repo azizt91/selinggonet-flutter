@@ -89,7 +89,7 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         TextButton(
-                          onPressed: () => context.push(Uri(path: '/customer/invoices', queryParameters: {'tab': '0'}).toString()),
+                          onPressed: () => context.go(Uri(path: '/customer/invoices', queryParameters: {'tab': '0'}).toString()),
                           child: const Text('Lihat Semua'),
                         ),
                       ],
@@ -269,7 +269,7 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () => context.push(
+                    onPressed: () => context.go(
                       Uri(
                         path: '/customer/invoices',
                         queryParameters: {

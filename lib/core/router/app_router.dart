@@ -54,49 +54,51 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // Customer Routes
-      GoRoute(
-        path: '/customer/dashboard',
-        builder: (context, state) => CustomerScaffold(
-          currentRoute: state.matchedLocation,
-          child: const CustomerDashboardPage(),
-        ),
-      ),
-      GoRoute(
-        path: '/customer/profile',
-        builder: (context, state) => CustomerScaffold(
-          currentRoute: state.matchedLocation,
-          child: const CustomerProfilePage(),
-        ),
-      ),
-      GoRoute(
-        path: '/customer/invoices',
-        builder: (context, state) {
-          final tab = state.uri.queryParameters['tab'];
-          final invoiceId = state.uri.queryParameters['invoiceId'];
-          final initialTabIndex = tab != null ? int.tryParse(tab) ?? 0 : 0;
+      // Customer Routes wrapped in ShellRoute to persist BottomNavigationBar
+      ShellRoute(
+        builder: (context, state, child) {
           return CustomerScaffold(
             currentRoute: state.matchedLocation,
-            child: CustomerInvoicesPage(
-              initialTabIndex: initialTabIndex,
-              highlightInvoiceId: invoiceId,
-            ),
+            child: child,
           );
         },
+        routes: [
+          GoRoute(
+            path: '/customer/dashboard',
+            builder: (context, state) => const CustomerDashboardPage(),
+          ),
+          GoRoute(
+            path: '/customer/profile',
+            builder: (context, state) => const CustomerProfilePage(),
+          ),
+          GoRoute(
+            path: '/customer/invoices',
+            builder: (context, state) {
+              final tab = state.uri.queryParameters['tab'];
+              final invoiceId = state.uri.queryParameters['invoiceId'];
+              final initialTabIndex = tab != null ? int.tryParse(tab) ?? 0 : 0;
+              return CustomerInvoicesPage(
+                initialTabIndex: initialTabIndex,
+                highlightInvoiceId: invoiceId,
+              );
+            },
+          ),
+          GoRoute(
+            path: '/customer/payment-info',
+            builder: (context, state) => const PaymentInfoPage(),
+          ),
+          GoRoute(
+            path: '/customer/help',
+            builder: (context, state) => const HelpPage(),
+          ),
+          GoRoute(
+            path: '/customer/wifi',
+            builder: (context, state) => const WifiSettingsPage(),
+          ),
+        ],
       ),
-      GoRoute(
-        path: '/customer/payment-info',
-        builder: (context, state) => CustomerScaffold(
-          currentRoute: state.matchedLocation,
-          child: const PaymentInfoPage(),
-        ),
-      ),
-      GoRoute(
-        path: '/customer/help',
-        builder: (context, state) => CustomerScaffold(
-          currentRoute: state.matchedLocation,
-          child: const HelpPage(),
-        ),
-      ),
+
+      // Other routes that don't show the bottom nav
       GoRoute(
         path: '/customer/help/faq-wifi-modem',
         builder: (context, state) => const FaqWifiModemPage(),
@@ -104,13 +106,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/customer/help/tutorial-ganti-wifi',
         builder: (context, state) => const TutorialGantiWifiPage(),
-      ),
-      GoRoute(
-        path: '/customer/wifi',
-        builder: (context, state) => CustomerScaffold(
-          currentRoute: state.matchedLocation,
-          child: const WifiSettingsPage(),
-        ),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

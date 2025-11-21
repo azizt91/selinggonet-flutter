@@ -234,7 +234,7 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
               child: Row(
                 children: [
                   IconButton(
-                    onPressed: () => context.pop(),
+                    onPressed: () => context.go('/customer/profile'),
                     icon: const Icon(Icons.arrow_back, color: Color(0xFF110E1B)),
                   ),
                   const Expanded(
@@ -965,36 +965,65 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
     try {
       final supabase = Supabase.instance.client;
       
-      // Save to log
-      await supabase.from('wifi_change_logs').insert({
+      // Save to log first
+      final logResponse = await supabase.from('wifi_change_logs').insert({
         'customer_id': user.id,
         'ip_address': user.ipStaticPppoe,
         'old_ssid': _currentSsid ?? 'Unknown',
         'new_ssid': newSsid.isNotEmpty ? newSsid : _currentSsid,
         'status': 'processing',
-      });
+      }).select().single();
 
-      // TODO: Implement GenieACS API call to change WiFi
-      // For now, just show success message
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Perintah ganti WiFi berhasil dikirim! Perangkat akan diperbarui dalam 1-2 menit.'),
-            backgroundColor: AppColors.success,
-            duration: Duration(seconds: 5),
-          ),
-        );
+      final logId = logResponse['id'];
 
-        // Clear form
-        _ssidController.clear();
-        _passwordController.clear();
-        _confirmPasswordController.clear();
+      // Call GenieACS to change WiFi
+      final result = await _changeWiFiViaGenieACS(user.ipStaticPppoe!, newSsid, newPassword);
 
-        // Reload data
-        await _loadChangeHistory();
+      if (result['success'] == true) {
+        // Update log status to success
+        await supabase
+            .from('wifi_change_logs')
+            .update({'status': 'success'})
+            .eq('id', logId);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Perintah ganti WiFi berhasil dikirim! Perangkat akan diperbarui dalam 1-2 menit.'),
+              backgroundColor: AppColors.success,
+              duration: Duration(seconds: 5),
+            ),
+          );
+
+          // Clear form
+          _ssidController.clear();
+          _passwordController.clear();
+          _confirmPasswordController.clear();
+
+          // Reload data
+          await _loadChangeHistory();
+        }
+      } else {
+        // Update log status to failed
+        await supabase
+            .from('wifi_change_logs')
+            .update({
+              'status': 'failed',
+              'error_message': result['message'],
+            })
+            .eq('id', logId);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Gagal mengganti WiFi: ${result['message']}'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
       }
     } catch (e) {
+      print('Error changing WiFi: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1007,6 +1036,116 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<Map<String, dynamic>> _changeWiFiViaGenieACS(String ipAddress, String newSsid, String newPassword) async {
+    try {
+      final supabase = Supabase.instance.client;
+
+      // Get GenieACS settings
+      final settingsResponse = await supabase
+          .from('app_settings')
+          .select('genieacs_url, genieacs_username, genieacs_password')
+          .single();
+
+      final genieacsUrl = settingsResponse['genieacs_url'] as String?;
+      if (genieacsUrl == null || genieacsUrl.isEmpty) {
+        return {'success': false, 'message': 'URL GenieACS tidak dikonfigurasi'};
+      }
+
+      final username = settingsResponse['genieacs_username'] as String?;
+      final password = settingsResponse['genieacs_password'] as String?;
+      final auth = (username != null && username.isNotEmpty && password != null && password.isNotEmpty)
+          ? {'username': username, 'password': password}
+          : null;
+
+      // Step 1: Get device ID
+      final query = {
+        r'$or': [
+          {'InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.ExternalIPAddress': ipAddress},
+          {'VirtualParameters.pppoeIP': ipAddress}
+        ]
+      };
+
+      final queryUrl = '$genieacsUrl/devices?query=${Uri.encodeComponent(jsonEncode(query))}';
+
+      final devicesResponse = await supabase.functions.invoke(
+        'genieacs-proxy',
+        body: {
+          'url': queryUrl,
+          'method': 'GET',
+          if (auth != null) 'auth': auth,
+        },
+      );
+
+      if (devicesResponse.data == null) {
+        return {'success': false, 'message': 'Gagal menemukan device di GenieACS'};
+      }
+
+      final devices = devicesResponse.data as List;
+      if (devices.isEmpty) {
+        return {'success': false, 'message': 'Device tidak ditemukan di GenieACS'};
+      }
+
+      final deviceId = devices[0]['_id'];
+
+      // Step 2: Set SSID parameter (if provided)
+      if (newSsid.isNotEmpty) {
+        final ssidPath = 'InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID';
+        final ssidUrl = '$genieacsUrl/devices/$deviceId/tasks?timeout=3000&connection_request';
+
+        await supabase.functions.invoke(
+          'genieacs-proxy',
+          body: {
+            'url': ssidUrl,
+            'method': 'POST',
+            if (auth != null) 'auth': auth,
+            'body': {
+              'name': 'setParameterValues',
+              'parameterValues': [
+                [ssidPath, newSsid, 'xsd:string']
+              ]
+            }
+          },
+        );
+      }
+
+      // Step 3: Set Password parameter (if provided)
+      if (newPassword.isNotEmpty) {
+        final passwordPath = 'InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.KeyPassphrase';
+        final passwordUrl = '$genieacsUrl/devices/$deviceId/tasks?timeout=3000&connection_request';
+
+        await supabase.functions.invoke(
+          'genieacs-proxy',
+          body: {
+            'url': passwordUrl,
+            'method': 'POST',
+            if (auth != null) 'auth': auth,
+            'body': {
+              'name': 'setParameterValues',
+              'parameterValues': [
+                [passwordPath, newPassword, 'xsd:string']
+              ]
+            }
+          },
+        );
+      }
+
+      // Build success message
+      String message = 'WiFi berhasil diganti';
+      if (newSsid.isNotEmpty && newPassword.isNotEmpty) {
+        message = 'SSID dan Password berhasil diganti';
+      } else if (newSsid.isNotEmpty) {
+        message = 'SSID berhasil diganti';
+      } else if (newPassword.isNotEmpty) {
+        message = 'Password berhasil diganti';
+      }
+
+      return {'success': true, 'message': message};
+    } catch (e) {
+      print('Error in _changeWiFiViaGenieACS: $e');
+      return {'success': false, 'message': e.toString()};
     }
   }
 }

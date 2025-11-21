@@ -51,47 +51,49 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
   }
 
   Widget _buildDashboardContent(BuildContext context, WidgetRef ref, user, List<InvoiceModel> invoices) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        return ref.refresh(dashboardDataProvider.future);
-      },
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header
-            _buildHeader(context, user),
-            const SizedBox(height: 24),
+    return SafeArea(
+      child: RefreshIndicator(
+        onRefresh: () async {
+          return ref.refresh(dashboardDataProvider.future);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              _buildHeader(context, user),
+              const SizedBox(height: 24),
 
-            // Tagihan Card
-            _buildTagihanCard(context, invoices, user),
-            const SizedBox(height: 16),
+              // Tagihan Card
+              _buildTagihanCard(context, invoices, user),
+              const SizedBox(height: 16),
 
-            // Paket Aktif Card
-            _buildPaketAktifCard(context, user),
-            const SizedBox(height: 16),
+              // Paket Aktif Card
+              _buildPaketAktifCard(context, user),
+              const SizedBox(height: 16),
 
-            // Riwayat Pembayaran Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Riwayat Pembayaran',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                TextButton(
-                  onPressed: () => context.push(Uri(path: '/customer/invoices', queryParameters: {'tab': '0'}).toString()),
-                  child: const Text('Lihat Semua'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
+              // Riwayat Pembayaran Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Riwayat Pembayaran',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  TextButton(
+                    onPressed: () => context.push(Uri(path: '/customer/invoices', queryParameters: {'tab': '0'}).toString()),
+                    child: const Text('Lihat Semua'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
 
-            // Riwayat Pembayaran List
-            _buildRiwayatList(context, invoices),
-          ],
+              // Riwayat Pembayaran List
+              _buildRiwayatList(context, invoices),
+            ],
+          ),
         ),
       ),
     );

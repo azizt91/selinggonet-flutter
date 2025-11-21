@@ -1,3 +1,15 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../../../../data/models/profile_model.dart';
+import '../../../../../data/providers/payment_method_provider.dart';
+import '../../../../../data/providers/app_settings_provider.dart';
+import '../../../../../core/utils/whatsapp_launcher.dart';
+
+class PaymentModal extends ConsumerStatefulWidget {
+  final double totalAmount;
+  final String periods;
   final String formattedAmount;
   final ProfileModel user;
 

@@ -105,15 +105,22 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
           children: [
             CircleAvatar(
               radius: 20,
-              backgroundColor: Colors.grey[200],
+              backgroundColor: const Color(0xFF6A5ACD),
               backgroundImage: (user.photoUrl != null && user.photoUrl!.isNotEmpty)
                   ? NetworkImage(user.photoUrl!)
                   : null,
               onBackgroundImageError: (exception, stackTrace) {
-                // Fallback is handled by child
+                print('Error loading profile image: $exception');
               },
               child: (user.photoUrl == null || user.photoUrl!.isEmpty)
-                  ? const Icon(Icons.person, color: Colors.grey)
+                  ? Text(
+                      (user.fullName ?? 'P').substring(0, 1).toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    )
                   : null,
             ),
             const SizedBox(width: 12),

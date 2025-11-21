@@ -104,7 +104,7 @@ class _CustomerInvoicesPageState extends ConsumerState<CustomerInvoicesPage>
                         child: Row(
                           children: [
                             IconButton(
-                              onPressed: () => context.pop(),
+                              onPressed: () => context.go('/customer/dashboard'),
                               icon: const Icon(Icons.arrow_back, color: Color(0xFF110E1B)),
                             ),
                             const Expanded(

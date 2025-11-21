@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:io';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../data/providers/auth_provider.dart';
 
@@ -186,7 +185,7 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
                         icon: Icons.wifi,
                         title: 'Pengaturan WiFi',
                         onTap: () {
-                          context.push('/customer/wifi');
+                          context.go('/customer/wifi');
                         },
                       ),
                     ],
@@ -641,8 +640,9 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
 
     try {
       final supabase = Supabase.instance.client;
-      final bytes = await File(pickedFile.path).readAsBytes();
-      final fileExt = pickedFile.path.split('.').last;
+      // Use readAsBytes() from XFile which works on web
+      final bytes = await pickedFile.readAsBytes();
+      final fileExt = pickedFile.name.split('.').last;
       final fileName = '${user.id}-${DateTime.now().millisecondsSinceEpoch}.$fileExt';
       
       // Upload to Supabase Storage

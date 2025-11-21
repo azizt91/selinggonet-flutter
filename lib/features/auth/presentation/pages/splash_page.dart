@@ -46,11 +46,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
     authState.when(
       data: (user) {
         if (user != null) {
-          if (user.isAdmin) {
-            context.go('/admin/dashboard');
-          } else {
-            context.go('/customer/dashboard');
-          }
+          context.go('/customer/dashboard');
         } else {
           context.go('/login');
         }

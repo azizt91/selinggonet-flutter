@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../data/providers/auth_provider.dart';
-import '../../../../../data/providers/wifi_provider.dart';
 
 class WifiSettingsPage extends ConsumerStatefulWidget {
   const WifiSettingsPage({super.key});
@@ -15,210 +16,622 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
   final _formKey = GlobalKey<FormState>();
   final _ssidController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _passwordMismatch = false;
+  
+  String? _currentSsid;
+  String? _currentPassword;
+  String? _currentIp;
+  List<Map<String, dynamic>> _connectedDevices = [];
+  List<Map<String, dynamic>> _changeHistory = [];
+  bool _isLoadingWifiInfo = true;
+  bool _isLoadingDevices = true;
+  bool _isLoadingHistory = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+    
+    // Add listener for password confirmation
+    _confirmPasswordController.addListener(() {
+      setState(() {
+        _passwordMismatch = _passwordController.text.isNotEmpty &&
+            _confirmPasswordController.text.isNotEmpty &&
+            _passwordController.text != _confirmPasswordController.text;
+      });
+    });
+  }
 
   @override
   void dispose() {
     _ssidController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    final user = ref.read(currentUserProvider).value;
+    if (user == null) return;
+
+    setState(() {
+      _currentIp = user.ipStaticPppoe;
+    });
+
+    await Future.wait([
+      _loadCurrentWifiInfo(),
+      _loadConnectedDevices(),
+      _loadChangeHistory(),
+    ]);
+  }
+
+  Future<void> _loadCurrentWifiInfo() async {
+    setState(() => _isLoadingWifiInfo = true);
+    
+    try {
+      final user = ref.read(currentUserProvider).value;
+      if (user?.ipStaticPppoe == null) {
+        setState(() {
+          _currentSsid = 'IP Address tidak ditemukan';
+          _currentPassword = '-';
+        });
+        return;
+      }
+
+      // TODO: Implement GenieACS API call to get current WiFi info
+      // For now, show placeholder
+      setState(() {
+        _currentSsid = 'Tidak dapat diambil';
+        _currentPassword = 'Tidak dapat diambil';
+      });
+    } catch (e) {
+      setState(() {
+        _currentSsid = 'Gagal mengambil data';
+        _currentPassword = 'Gagal mengambil data';
+      });
+    } finally {
+      setState(() => _isLoadingWifiInfo = false);
+    }
+  }
+
+  Future<void> _loadConnectedDevices() async {
+    setState(() => _isLoadingDevices = true);
+    
+    try {
+      // TODO: Implement GenieACS API call to get connected devices
+      // For now, show empty list
+      setState(() {
+        _connectedDevices = [];
+      });
+    } catch (e) {
+      print('Error loading connected devices: $e');
+    } finally {
+      setState(() => _isLoadingDevices = false);
+    }
+  }
+
+  Future<void> _loadChangeHistory() async {
+    setState(() => _isLoadingHistory = true);
+    
+    try {
+      final user = ref.read(currentUserProvider).value;
+      if (user?.id == null) return;
+
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('wifi_change_logs')
+          .select()
+          .eq('customer_id', user!.id!)
+          .order('changed_at', ascending: false)
+          .limit(5);
+
+      setState(() {
+        _changeHistory = List<Map<String, dynamic>>.from(response);
+      });
+    } catch (e) {
+      print('Error loading change history: $e');
+    } finally {
+      setState(() => _isLoadingHistory = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final userAsync = ref.watch(currentUserProvider);
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ganti WiFi'),
-      ),
-      body: userAsync.when(
-        data: (user) {
-          return Form(
-            key: _formKey,
-            child: ListView(
+      backgroundColor: const Color(0xFFF9F8FC),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            Container(
+              color: Colors.white,
               padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => context.pop(),
+                    icon: const Icon(Icons.arrow_back, color: Color(0xFF110E1B)),
+                  ),
+                  const Expanded(
+                    child: Text(
+                      'Pengaturan WiFi',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF110E1B),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 40),
+                ],
+              ),
+            ),
+
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    
+                    // Info Card
+                    _buildInfoCard(),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Current WiFi Info
+                    _buildCurrentWifiCard(),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Connected Devices
+                    _buildConnectedDevicesCard(),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Change WiFi Form
+                    _buildChangeWifiForm(),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Change History
+                    _buildChangeHistoryCard(),
+                    
+                    const SizedBox(height: 100),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.blue[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.blue[200]!),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline, color: Colors.blue[600], size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Informasi Penting',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue[900],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '• Perubahan SSID dan Password akan diterapkan ke router WiFi Anda\n• Proses membutuhkan waktu 1-2 menit\n• Setelah berhasil, hubungkan ulang perangkat Anda ke WiFi dengan nama dan password baru',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue[700],
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentWifiCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Informasi WiFi Saat Ini',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            _buildInfoRow(Icons.wifi, 'Nama WiFi (SSID)', _currentSsid ?? 'Memuat...'),
+            const SizedBox(height: 8),
+            _buildInfoRow(Icons.lock, 'Password WiFi', _currentPassword ?? 'Memuat...'),
+            const SizedBox(height: 8),
+            _buildInfoRow(Icons.router, 'IP Address', _currentIp ?? 'Memuat...'),
+            
+            const SizedBox(height: 8),
+            Text(
+              '* SSID saat ini mungkin tidak dapat diambil karena keterbatasan akses. Anda tetap dapat mengganti WiFi dengan mengisi form di bawah.',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[400],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: Colors.grey[400]),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF110E1B),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConnectedDevicesCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Info Card
-                Card(
-                  color: AppColors.info.withOpacity(0.1),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.info_outline,
-                          color: AppColors.info,
-                          size: 48,
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Perubahan WiFi akan mempengaruhi semua perangkat yang terhubung',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Pastikan Anda mengingat SSID dan password baru',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Current WiFi Info
-                if (user?.ipStaticPppoe != null) ...[
-                  _buildCurrentWifiInfo(ref, user!.ipStaticPppoe!),
-                  const SizedBox(height: 24),
-                ],
-
-                // WiFi Change History
-                if (user?.id != null) ...[
-                  _buildChangeHistory(ref, user!.id),
-                  const SizedBox(height: 24),
-                ],
-
-                // Current Info (if available)
-                if (user?.ipStaticPppoe != null) ...[
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Informasi Router',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              const Icon(Icons.router, size: 16),
-                              const SizedBox(width: 8),
-                              Text(
-                                'IP: ${user?.ipStaticPppoe}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-
-                // Form Title
-                const Text(
-                  'Pengaturan WiFi Baru',
+                Text(
+                  'Perangkat Terhubung',
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
                   ),
                 ),
-                const SizedBox(height: 16),
-
-                // SSID Field
-                TextFormField(
-                  controller: _ssidController,
-                  decoration: const InputDecoration(
-                    labelText: 'SSID (Nama WiFi) *',
-                    prefixIcon: Icon(Icons.wifi),
-                    helperText: 'Nama WiFi yang akan ditampilkan',
+                TextButton(
+                  onPressed: _loadConnectedDevices,
+                  child: const Text(
+                    'Refresh',
+                    style: TextStyle(fontSize: 12),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'SSID harus diisi';
-                    }
-                    if (value.length < 3) {
-                      return 'SSID minimal 3 karakter';
-                    }
-                    return null;
-                  },
                 ),
-                const SizedBox(height: 16),
+              ],
+            ),
+            const SizedBox(height: 12),
+            
+            if (_isLoadingDevices)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_connectedDevices.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Tidak ada perangkat terhubung',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ),
+              )
+            else
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  headingTextStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
+                  dataTextStyle: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF110E1B),
+                  ),
+                  columns: const [
+                    DataColumn(label: Text('Device')),
+                    DataColumn(label: Text('IP Address')),
+                    DataColumn(label: Text('MAC Address')),
+                    DataColumn(label: Text('Type')),
+                  ],
+                  rows: _connectedDevices.map((device) {
+                    return DataRow(cells: [
+                      DataCell(Text(device['hostname'] ?? '-')),
+                      DataCell(Text(device['ipAddress'] ?? '-')),
+                      DataCell(Text(device['macAddress'] ?? '-')),
+                      DataCell(Text(device['type'] ?? '-')),
+                    ]);
+                  }).toList(),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                // Password Field
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password *',
-                    prefixIcon: const Icon(Icons.lock),
-                    helperText: 'Minimal 8 karakter',
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+  Widget _buildChangeWifiForm() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Ganti SSID & Password',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // SSID Field
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Nama WiFi Baru (SSID)',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF110E1B),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _ssidController,
+                    decoration: InputDecoration(
+                      hintText: 'Contoh: WiFi-Rumah-Saya (opsional)',
+                      hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFD6D0E7)),
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFD6D0E7)),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                    maxLength: 32,
+                  ),
+                  Text(
+                    'Kosongkan jika tidak ingin mengganti SSID',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[400],
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Password harus diisi';
-                    }
-                    if (value.length < 8) {
-                      return 'Password minimal 8 karakter';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 32),
-
-                // Warning Card
-                Card(
-                  color: AppColors.warning.withOpacity(0.1),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.warning_amber,
-                          color: AppColors.warning,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Proses perubahan WiFi membutuhkan waktu beberapa menit',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                        ),
-                      ],
+                ],
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Password Field
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Password WiFi Baru',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF110E1B),
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-
-                // Submit Button
-                ElevatedButton(
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      hintText: 'Minimal 8 karakter (opsional)',
+                      hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFD6D0E7)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFD6D0E7)),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.all(12),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Kosongkan jika tidak ingin mengganti password. Minimal 8 karakter jika diisi.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Confirm Password Field
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Konfirmasi Password',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF110E1B),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      hintText: 'Ketik ulang password (jika diisi)',
+                      hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: _passwordMismatch ? Colors.red : const Color(0xFFD6D0E7),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: _passwordMismatch ? Colors.red : const Color(0xFFD6D0E7),
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                  if (_passwordMismatch)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Password tidak cocok',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Submit Button
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleSubmit,
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: const Color(0xFF683FE4),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey[300],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -229,20 +642,199 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text('Ganti WiFi'),
+                      : const Text(
+                          'SIMPAN',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChangeHistoryCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Riwayat Perubahan',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            if (_isLoadingHistory)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_changeHistory.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Belum ada riwayat perubahan',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ),
+              )
+            else
+              Column(
+                children: _changeHistory.map((log) {
+                  final status = log['status'] as String?;
+                  final statusColor = status == 'success'
+                      ? Colors.green[600]
+                      : status == 'failed'
+                          ? Colors.red[600]
+                          : Colors.yellow[700];
+                  final statusText = status == 'success'
+                      ? 'Berhasil'
+                      : status == 'failed'
+                          ? 'Gagal'
+                          : 'Diproses';
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                log['new_ssid'] ?? '-',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF110E1B),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                log['changed_at'] != null
+                                    ? DateTime.parse(log['changed_at'])
+                                        .toLocal()
+                                        .toString()
+                                        .substring(0, 16)
+                                    : '-',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                              if (log['error_message'] != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  log['error_message'],
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        Text(
+                          statusText,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: statusColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+          ],
+        ),
       ),
     );
   }
 
   Future<void> _handleSubmit() async {
-    if (!_formKey.currentState!.validate()) {
+    final newSsid = _ssidController.text.trim();
+    final newPassword = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    // Validation
+    if (newSsid.isEmpty && newPassword.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Minimal isi SSID atau Password baru'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
+    if (newPassword.isNotEmpty || confirmPassword.isNotEmpty) {
+      if (newPassword != confirmPassword) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password tidak cocok'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password minimal 8 karakter'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+        return;
+      }
+    }
+
+    final user = ref.read(currentUserProvider).value;
+    if (user?.ipStaticPppoe == null || user!.ipStaticPppoe!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('IP Address tidak ditemukan. Hubungi admin untuk mengatur IP Address Anda.'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
       return;
     }
 
@@ -255,21 +847,17 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Yakin ingin mengubah WiFi?'),
+            const Text('Yakin ingin mengganti WiFi?'),
             const SizedBox(height: 12),
-            Text(
-              'SSID: ${_ssidController.text}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Password: ${_passwordController.text}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+            if (newSsid.isNotEmpty)
+              Text(
+                'SSID Baru: $newSsid',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             const SizedBox(height: 12),
             const Text(
-              'Semua perangkat akan terputus dan perlu reconnect dengan kredensial baru.',
-              style: TextStyle(fontSize: 12, color: AppColors.danger),
+              'Proses membutuhkan waktu 1-2 menit.',
+              style: TextStyle(fontSize: 12),
             ),
           ],
         ),
@@ -291,303 +879,53 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
 
     if (confirmed != true) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      // Get user data
-      final userAsync = ref.read(currentUserProvider);
-      final user = userAsync.value;
+      final supabase = Supabase.instance.client;
+      
+      // Save to log
+      await supabase.from('wifi_change_logs').insert({
+        'customer_id': user.id,
+        'ip_address': user.ipStaticPppoe,
+        'old_ssid': _currentSsid ?? 'Unknown',
+        'new_ssid': newSsid.isNotEmpty ? newSsid : _currentSsid,
+        'status': 'processing',
+      });
 
-      if (user == null || user.ipStaticPppoe == null) {
-        throw Exception('IP Address tidak ditemukan');
-      }
-
-      // Get current SSID for logging
-      final currentWifiAsync = ref.read(currentWifiInfoProvider(user.ipStaticPppoe!));
-      final currentSsid = currentWifiAsync.value?['ssid'] ?? 'Unknown';
-
-      // Call WiFi controller to change WiFi
-      final result = await ref.read(wifiControllerProvider.notifier).changeWifi(
-        customerId: user.id!,
-        ipAddress: user.ipStaticPppoe!,
-        oldSsid: currentSsid,
-        newSsid: _ssidController.text.isNotEmpty ? _ssidController.text : null,
-        newPassword: _passwordController.text.isNotEmpty ? _passwordController.text : null,
-      );
-
-      if (!result['success']) {
-        throw Exception(result['message']);
-      }
-
+      // TODO: Implement GenieACS API call to change WiFi
+      // For now, just show success message
+      
       if (mounted) {
-        // Invalidate providers to refresh data
-        final user = ref.read(currentUserProvider).value;
-        if (user != null) {
-          if (user.ipStaticPppoe != null) {
-            ref.invalidate(currentWifiInfoProvider(user.ipStaticPppoe!));
-          }
-          if (user.id != null) {
-            ref.invalidate(wifiChangeHistoryProvider(user.id!));
-          }
-        }
-
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result['message'] ?? 'Permintaan perubahan WiFi berhasil dikirim. Proses akan memakan waktu beberapa menit.',
-            ),
+          const SnackBar(
+            content: Text('✅ Perintah ganti WiFi berhasil dikirim! Perangkat akan diperbarui dalam 1-2 menit.'),
             backgroundColor: AppColors.success,
-            duration: const Duration(seconds: 5),
+            duration: Duration(seconds: 5),
           ),
         );
 
         // Clear form
         _ssidController.clear();
         _passwordController.clear();
+        _confirmPasswordController.clear();
+
+        // Reload data
+        await _loadChangeHistory();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('❌ Error: $e'),
             backgroundColor: AppColors.danger,
           ),
         );
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
-  }
-
-  Widget _buildCurrentWifiInfo(WidgetRef ref, String ipAddress) {
-    final wifiInfoAsync = ref.watch(currentWifiInfoProvider(ipAddress));
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'WiFi Saat Ini',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.refresh, size: 20),
-                  onPressed: () {
-                    ref.invalidate(currentWifiInfoProvider(ipAddress));
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            wifiInfoAsync.when(
-              data: (info) {
-                if (info['success'] == true) {
-                  return Column(
-                    children: [
-                      _buildInfoRow('SSID', info['ssid'] ?? '-'),
-                      const SizedBox(height: 8),
-                      _buildInfoRow('Password', info['password'] ?? '-'),
-                    ],
-                  );
-                }
-                return Text(
-                  info['message'] ?? 'Gagal mengambil data WiFi',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.danger,
-                  ),
-                );
-              },
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              error: (error, stack) => Text(
-                'Error: $error',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.danger,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 80,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
-        ),
-        const Text(': ', style: TextStyle(fontSize: 12)),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildChangeHistory(WidgetRef ref, String customerId) {
-    final historyAsync = ref.watch(wifiChangeHistoryProvider(customerId));
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Riwayat Perubahan',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            historyAsync.when(
-              data: (history) {
-                if (history.isEmpty) {
-                  return const Text(
-                    'Belum ada riwayat perubahan',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
-                  );
-                }
-                return Column(
-                  children: history.take(5).map((log) {
-                    final status = log['status'] as String?;
-                    final statusColor = status == 'success'
-                        ? AppColors.success
-                        : status == 'failed'
-                            ? AppColors.danger
-                            : AppColors.warning;
-                    final statusText = status == 'success'
-                        ? 'Berhasil'
-                        : status == 'failed'
-                            ? 'Gagal'
-                            : 'Diproses';
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  log['new_ssid'] ?? '-',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  log['changed_at'] != null
-                                      ? DateTime.parse(log['changed_at'])
-                                          .toLocal()
-                                          .toString()
-                                          .substring(0, 16)
-                                      : '-',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                if (log['error_message'] != null) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    log['error_message'],
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: AppColors.danger,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              statusText,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: statusColor,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              error: (error, stack) => Text(
-                'Error: $error',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.danger,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

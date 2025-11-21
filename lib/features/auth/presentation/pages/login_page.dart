@@ -39,12 +39,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
       if (!mounted) return;
 
-      // Navigate based on role
-      if (user.isAdmin) {
-        context.go('/admin/dashboard');
-      } else {
-        context.go('/customer/dashboard');
-      }
+      // Navigate to customer dashboard
+      context.go('/customer/dashboard');
     } catch (e) {
       if (!mounted) return;
       

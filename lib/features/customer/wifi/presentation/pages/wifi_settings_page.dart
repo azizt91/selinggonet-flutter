@@ -1019,7 +1019,16 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
 
     try {
       final supabase = Supabase.instance.client;
-      await supabase.from('wifi_change_logs').delete().eq('id', id);
+      final response = await supabase
+          .from('wifi_change_logs')
+          .delete()
+          .eq('id', id)
+          .select();
+      
+      // Check if any row was actually deleted
+      if (response.isEmpty) {
+        throw Exception('Gagal menghapus. Mungkin Anda tidak memiliki izin atau data sudah terhapus.');
+      }
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

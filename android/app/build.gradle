@@ -29,7 +29,7 @@ if (flutterRoot == null) {
 
 android {
     namespace "com.selinggonet.ispmgmt"
-    compileSdk 35
+    compileSdk 34
     ndkVersion "25.1.8937393"
 
     compileOptions {
@@ -48,7 +48,7 @@ android {
     defaultConfig {
         applicationId "com.selinggonet.ispmgmt"
         minSdk 23
-        targetSdk 35
+        targetSdk 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }

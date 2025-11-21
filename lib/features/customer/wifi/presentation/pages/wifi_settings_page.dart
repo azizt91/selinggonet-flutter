@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:convert';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../data/providers/auth_provider.dart';
 
@@ -74,7 +75,7 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
     
     try {
       final user = ref.read(currentUserProvider).value;
-      if (user?.ipStaticPppoe == null) {
+      if (user?.ipStaticPppoe == null || user!.ipStaticPppoe!.isEmpty) {
         setState(() {
           _currentSsid = 'IP Address tidak ditemukan';
           _currentPassword = '-';
@@ -82,13 +83,93 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
         return;
       }
 
-      // TODO: Implement GenieACS API call to get current WiFi info
-      // For now, show placeholder
-      setState(() {
-        _currentSsid = 'Tidak dapat diambil';
-        _currentPassword = 'Tidak dapat diambil';
-      });
+      final supabase = Supabase.instance.client;
+      
+      // Get GenieACS settings from app_settings
+      final settingsResponse = await supabase
+          .from('app_settings')
+          .select('genieacs_url, genieacs_username, genieacs_password')
+          .single();
+      
+      final genieacsUrl = settingsResponse['genieacs_url'] as String?;
+      final username = settingsResponse['genieacs_username'] as String?;
+      final password = settingsResponse['genieacs_password'] as String?;
+      
+      if (genieacsUrl == null || genieacsUrl.isEmpty) {
+        setState(() {
+          _currentSsid = 'GenieACS belum dikonfigurasi';
+          _currentPassword = '-';
+        });
+        return;
+      }
+
+      // Prepare auth credentials
+      final auth = (username != null && username.isNotEmpty && password != null && password.isNotEmpty)
+          ? {'username': username, 'password': password}
+          : null;
+
+      // Build query URL
+      final query = {
+        r'$or': [
+          {'InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.ExternalIPAddress': user.ipStaticPppoe},
+          {'VirtualParameters.pppoeIP': user.ipStaticPppoe}
+        ]
+      };
+      
+      final targetUrl = '$genieacsUrl/devices?query=${Uri.encodeComponent(jsonEncode(query))}';
+      
+      // Call GenieACS proxy function
+      final response = await supabase.functions.invoke(
+        'genieacs-proxy',
+        body: {
+          'url': targetUrl,
+          'method': 'GET',
+          if (auth != null) 'auth': auth,
+        },
+      );
+
+      if (response.data == null) {
+        throw Exception('No data received from GenieACS');
+      }
+
+      final devices = response.data as List;
+      
+      if (devices.isNotEmpty) {
+        final device = devices[0] as Map<String, dynamic>;
+        String ssid = 'Tidak dapat diambil';
+        String wifiPassword = 'Tidak dapat diambil';
+
+        // Safely access nested SSID value
+        try {
+          final lanDevice = device['InternetGatewayDevice']?['LANDevice']?['1'];
+          final wlanConfig = lanDevice?['WLANConfiguration']?['1'];
+          ssid = wlanConfig?['SSID']?['_value'] ?? 'Tidak dapat diambil';
+        } catch (e) {
+          print('Could not find SSID in device data: $e');
+        }
+
+        // Safely access nested Password value
+        try {
+          final lanDevice = device['InternetGatewayDevice']?['LANDevice']?['1'];
+          final wlanConfig = lanDevice?['WLANConfiguration']?['1'];
+          final preSharedKey = wlanConfig?['PreSharedKey']?['1'];
+          wifiPassword = preSharedKey?['KeyPassphrase']?['_value'] ?? 'Tidak dapat diambil';
+        } catch (e) {
+          print('Could not find KeyPassphrase in device data: $e');
+        }
+
+        setState(() {
+          _currentSsid = ssid;
+          _currentPassword = wifiPassword;
+        });
+      } else {
+        setState(() {
+          _currentSsid = 'Device tidak ditemukan';
+          _currentPassword = '-';
+        });
+      }
     } catch (e) {
+      print('Error loading WiFi info: $e');
       setState(() {
         _currentSsid = 'Gagal mengambil data';
         _currentPassword = 'Gagal mengambil data';

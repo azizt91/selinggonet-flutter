@@ -85,15 +85,25 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
 
       final supabase = Supabase.instance.client;
       
-      // Get GenieACS settings from app_settings
+      // Get GenieACS settings from genieacs_settings table
       final settingsResponse = await supabase
-          .from('app_settings')
-          .select('genieacs_url, genieacs_username, genieacs_password')
-          .single();
+          .from('genieacs_settings')
+          .select('setting_key, setting_value')
+          .inFilter('setting_key', ['genieacs_url', 'genieacs_username', 'genieacs_password']);
       
-      final genieacsUrl = settingsResponse['genieacs_url'] as String?;
-      final username = settingsResponse['genieacs_username'] as String?;
-      final password = settingsResponse['genieacs_password'] as String?;
+      String? genieacsUrl;
+      String? username;
+      String? password;
+
+      for (final item in settingsResponse) {
+        if (item['setting_key'] == 'genieacs_url') {
+          genieacsUrl = item['setting_value'];
+        } else if (item['setting_key'] == 'genieacs_username') {
+          username = item['setting_value'];
+        } else if (item['setting_key'] == 'genieacs_password') {
+          password = item['setting_value'];
+        }
+      }
       
       if (genieacsUrl == null || genieacsUrl.isEmpty) {
         setState(() {
@@ -183,13 +193,116 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
     setState(() => _isLoadingDevices = true);
     
     try {
-      // TODO: Implement GenieACS API call to get connected devices
-      // For now, show empty list
+      final user = ref.read(currentUserProvider).value;
+      if (user?.ipStaticPppoe == null || user!.ipStaticPppoe!.isEmpty) {
+        setState(() {
+          _connectedDevices = [];
+        });
+        return;
+      }
+
+      final supabase = Supabase.instance.client;
+      
+      // Get GenieACS settings from genieacs_settings table
+      final settingsResponse = await supabase
+          .from('genieacs_settings')
+          .select('setting_key, setting_value')
+          .inFilter('setting_key', ['genieacs_url', 'genieacs_username', 'genieacs_password']);
+      
+      String? genieacsUrl;
+      String? username;
+      String? password;
+
+      for (final item in settingsResponse) {
+        if (item['setting_key'] == 'genieacs_url') {
+          genieacsUrl = item['setting_value'];
+        } else if (item['setting_key'] == 'genieacs_username') {
+          username = item['setting_value'];
+        } else if (item['setting_key'] == 'genieacs_password') {
+          password = item['setting_value'];
+        }
+      }
+      
+      if (genieacsUrl == null || genieacsUrl.isEmpty) {
+        setState(() {
+          _connectedDevices = [];
+        });
+        return;
+      }
+
+      // Prepare auth credentials
+      final auth = (username != null && username.isNotEmpty && password != null && password.isNotEmpty)
+          ? {'username': username, 'password': password}
+          : null;
+
+      // Build query URL
+      final query = {
+        r'$or': [
+          {'InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.ExternalIPAddress': user.ipStaticPppoe},
+          {'VirtualParameters.pppoeIP': user.ipStaticPppoe}
+        ]
+      };
+      
+      final targetUrl = '$genieacsUrl/devices?query=${Uri.encodeComponent(jsonEncode(query))}';
+      
+      // Call GenieACS proxy function
+      final response = await supabase.functions.invoke(
+        'genieacs-proxy',
+        body: {
+          'url': targetUrl,
+          'method': 'GET',
+          if (auth != null) 'auth': auth,
+        },
+      );
+
+      if (response.data == null) {
+        throw Exception('No data received from GenieACS');
+      }
+
+      final devices = response.data as List;
+      
+      if (devices.isNotEmpty) {
+        final device = devices[0] as Map<String, dynamic>;
+        final List<Map<String, dynamic>> connectedDevices = [];
+
+        try {
+          final hosts = device['InternetGatewayDevice']?['LANDevice']?['1']?['Hosts']?['Host'];
+          
+          if (hosts != null && hosts is Map) {
+            hosts.forEach((key, value) {
+              final host = value as Map<String, dynamic>;
+              final hostname = host['HostName']?['_value'] ?? 'Unknown';
+              final ipAddr = host['IPAddress']?['_value'] ?? '-';
+              final macAddr = host['MACAddress']?['_value'] ?? '-';
+              final interfaceType = host['InterfaceType']?['_value'] ?? '-';
+
+              if (ipAddr != '-' && ipAddr != '0.0.0.0') {
+                connectedDevices.add({
+                  'hostname': hostname,
+                  'ipAddress': ipAddr,
+                  'macAddress': macAddr,
+                  'type': interfaceType,
+                });
+              }
+            });
+          }
+        } catch (e) {
+          print('Error parsing connected devices: $e');
+        }
+
+        setState(() {
+          _connectedDevices = connectedDevices;
+        });
+      } else {
+        setState(() {
+          _connectedDevices = [];
+        });
+      }
+    } catch (e) {
+      print('Error loading connected devices: $e');
       setState(() {
         _connectedDevices = [];
       });
-    } catch (e) {
-      print('Error loading connected devices: $e');
     } finally {
       setState(() => _isLoadingDevices = false);
     }
@@ -1045,17 +1158,27 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
 
       // Get GenieACS settings
       final settingsResponse = await supabase
-          .from('app_settings')
-          .select('genieacs_url, genieacs_username, genieacs_password')
-          .single();
+          .from('genieacs_settings')
+          .select('setting_key, setting_value')
+          .inFilter('setting_key', ['genieacs_url', 'genieacs_username', 'genieacs_password']);
+      
+      String? genieacsUrl;
+      String? username;
+      String? password;
 
-      final genieacsUrl = settingsResponse['genieacs_url'] as String?;
+      for (final item in settingsResponse) {
+        if (item['setting_key'] == 'genieacs_url') {
+          genieacsUrl = item['setting_value'];
+        } else if (item['setting_key'] == 'genieacs_username') {
+          username = item['setting_value'];
+        } else if (item['setting_key'] == 'genieacs_password') {
+          password = item['setting_value'];
+        }
+      }
+
       if (genieacsUrl == null || genieacsUrl.isEmpty) {
         return {'success': false, 'message': 'URL GenieACS tidak dikonfigurasi'};
       }
-
-      final username = settingsResponse['genieacs_username'] as String?;
-      final password = settingsResponse['genieacs_password'] as String?;
       final auth = (username != null && username.isNotEmpty && password != null && password.isNotEmpty)
           ? {'username': username, 'password': password}
           : null;

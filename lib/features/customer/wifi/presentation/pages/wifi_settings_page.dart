@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../data/providers/auth_provider.dart';
 
@@ -941,10 +942,7 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
                               const SizedBox(height: 4),
                               Text(
                                 log['changed_at'] != null
-                                    ? DateTime.parse(log['changed_at'])
-                                        .toLocal()
-                                        .toString()
-                                        .substring(0, 16)
+                                    ? DateFormat('dd MMM yyyy HH:mm').format(DateTime.parse(log['changed_at']).toLocal())
                                     : '-',
                                 style: TextStyle(
                                   fontSize: 12,
@@ -955,22 +953,36 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
                                 const SizedBox(height: 4),
                                 Text(
                                   log['error_message'],
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.red,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.red[400],
                                   ),
                                 ),
                               ],
                             ],
                           ),
                         ),
-                        Text(
-                          statusText,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: statusColor,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              statusText,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: statusColor,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            InkWell(
+                              onTap: () => _deleteHistoryLog(log['id']),
+                              child: Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -981,6 +993,53 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _deleteHistoryLog(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Riwayat'),
+        content: const Text('Apakah Anda yakin ingin menghapus riwayat ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final supabase = Supabase.instance.client;
+      await supabase.from('wifi_change_logs').delete().eq('id', id);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Riwayat berhasil dihapus'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        _loadChangeHistory();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menghapus riwayat: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _handleSubmit() async {

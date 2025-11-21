@@ -23,7 +23,6 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
   bool _isEditing = false;
   bool _isLoading = false;
   bool _obscurePassword = true;
-  File? _selectedImage;
   String? _uploadedPhotoUrl;
 
   @override
@@ -690,7 +689,6 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
     final user = ref.read(currentUserProvider).value;
     setState(() {
       _isEditing = false;
-      _selectedImage = null;
       _fullNameController.text = user?.fullName ?? '';
       _emailController.text = user?.email ?? '';
       _whatsappController.text = user?.whatsappNumber ?? '';
@@ -732,7 +730,6 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
         );
         setState(() {
           _isEditing = false;
-          _selectedImage = null;
           _passwordController.clear();
         });
         ref.invalidate(currentUserProvider);

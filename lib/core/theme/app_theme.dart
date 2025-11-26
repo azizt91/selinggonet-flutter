@@ -26,7 +26,11 @@ class AppTheme {
         centerTitle: false,
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textPrimary,
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light, // For iOS
+        ),
         titleTextStyle: const TextStyle(
           color: AppColors.textPrimary,
           fontSize: 20,

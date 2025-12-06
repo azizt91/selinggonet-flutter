@@ -1,81 +1,146 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../repositories/notification_repository.dart';
-import '../models/notification_model.dart';
-import 'supabase_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../providers/auth_provider.dart';
 
-// Repository Provider
-final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
-  return NotificationRepository(ref.read(supabaseClientProvider));
-});
+// Notification Model
+class NotificationModel {
+  final String id;
+  final String title;
+  final String body;
+  final String? url;
+  final String? type;
+  final bool isRead;
+  final DateTime createdAt;
 
-// Notifications Provider
-final notificationsProvider = FutureProvider.autoDispose.family<List<NotificationModel>, String>(
-  (ref, userId) async {
-    final repository = ref.watch(notificationRepositoryProvider);
-    return repository.getUserNotifications(userId);
-  },
-);
+  NotificationModel({
+    required this.id,
+    required this.title,
+    required this.body,
+    this.url,
+    this.type,
+    required this.isRead,
+    required this.createdAt,
+  });
 
-// Unread Count Provider
-final unreadNotificationCountProvider = FutureProvider.autoDispose.family<int, String>(
-  (ref, userId) async {
-    final repository = ref.watch(notificationRepositoryProvider);
-    return repository.getUnreadNotificationCount(userId);
-  },
-);
+  factory NotificationModel.fromJson(Map<String, dynamic> json) {
+    return NotificationModel(
+      id: json['id'] as String,
+      title: json['title'] as String? ?? '',
+      body: json['body'] as String? ?? '',
+      url: json['url'] as String?,
+      type: json['type'] as String?,
+      isRead: json['is_read'] as bool? ?? false,
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+}
 
-// Notification Controller
-class NotificationController extends StateNotifier<AsyncValue<void>> {
-  final NotificationRepository _repository;
+// Notification Repository
+class NotificationRepository {
+  final SupabaseClient _supabase;
 
-  NotificationController(this._repository) : super(const AsyncValue.data(null));
+  NotificationRepository(this._supabase);
 
-  Future<void> markAsRead(String notificationId, String userId) async {
-    state = const AsyncValue.loading();
+  Future<List<NotificationModel>> getNotifications(String userId) async {
     try {
-      await _repository.markAsRead(notificationId, userId);
-      state = const AsyncValue.data(null);
-    } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
-      rethrow;
+      final response = await _supabase.rpc(
+        'get_user_notifications',
+        params: {'user_id_param': userId},
+      );
+
+      if (response == null) return [];
+
+      return (response as List)
+          .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      print('Error fetching notifications: $e');
+      return [];
     }
   }
 
-  Future<void> markAllAsRead(String userId) async {
-    state = const AsyncValue.loading();
+  Future<int> getUnreadCount(String userId) async {
     try {
-      await _repository.markAllAsRead(userId);
-      state = const AsyncValue.data(null);
-    } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
-      rethrow;
+      final notifications = await getNotifications(userId);
+      return notifications.where((n) => !n.isRead).length;
+    } catch (e) {
+      print('Error getting unread count: $e');
+      return 0;
     }
   }
 
-  Future<void> deleteNotification(String notificationId) async {
-    state = const AsyncValue.loading();
+  Future<bool> markAsRead(String notificationId, String userId) async {
     try {
-      await _repository.deleteNotification(notificationId);
-      state = const AsyncValue.data(null);
-    } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
-      rethrow;
+      await _supabase.from('notification_reads').upsert({
+        'notification_id': notificationId,
+        'user_id': userId,
+      });
+      return true;
+    } catch (e) {
+      print('Error marking notification as read: $e');
+      return false;
     }
   }
 
-  Future<void> clearAllNotifications(String userId) async {
-    state = const AsyncValue.loading();
+  Future<bool> markAllAsRead(String userId) async {
     try {
-      await _repository.clearAllNotifications(userId);
-      state = const AsyncValue.data(null);
-    } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
-      rethrow;
+      final notifications = await getNotifications(userId);
+      final unreadIds = notifications.where((n) => !n.isRead).map((n) => n.id).toList();
+
+      if (unreadIds.isEmpty) return true;
+
+      final records = unreadIds.map((id) => {
+        'notification_id': id,
+        'user_id': userId,
+      }).toList();
+
+      await _supabase.from('notification_reads').upsert(records);
+      return true;
+    } catch (e) {
+      print('Error marking all as read: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteNotification(String notificationId) async {
+    try {
+      // Delete read records first
+      await _supabase
+          .from('notification_reads')
+          .delete()
+          .eq('notification_id', notificationId);
+
+      // Then delete notification
+      await _supabase
+          .from('notifications')
+          .delete()
+          .eq('id', notificationId);
+
+      return true;
+    } catch (e) {
+      print('Error deleting notification: $e');
+      return false;
     }
   }
 }
 
-final notificationControllerProvider =
-    StateNotifierProvider<NotificationController, AsyncValue<void>>((ref) {
-  return NotificationController(ref.read(notificationRepositoryProvider));
+// Providers
+final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
+  return NotificationRepository(ref.read(supabaseClientProvider));
+});
+
+final notificationsProvider = FutureProvider.autoDispose<List<NotificationModel>>((ref) async {
+  final user = ref.watch(currentUserProvider).valueOrNull;
+  if (user == null) return [];
+
+  final repository = ref.watch(notificationRepositoryProvider);
+  return repository.getNotifications(user.id);
+});
+
+final unreadNotificationCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  final user = ref.watch(currentUserProvider).valueOrNull;
+  if (user == null) return 0;
+
+  final repository = ref.watch(notificationRepositoryProvider);
+  return repository.getUnreadCount(user.id);
 });

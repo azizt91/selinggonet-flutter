@@ -62,40 +62,87 @@ class DashboardChartsData {
   });
 
   factory DashboardChartsData.fromJson(Map<String, dynamic> json) {
+    // Parse dari format RPC get_dashboard_charts_data
+    // Format: revenue_chart.datasets[0].data, revenue_chart.labels, dll
+    
+    List<String> labels = [];
+    List<double> revenueData = [];
+    List<double> expensesData = [];
+    List<double> profitData = [];
+    List<int> customerGrowthData = [];
+    List<int> customerTotalData = [];
+    List<int> customerNetData = [];
+    Map<String, int> invoiceStatusCounts = {'paid': 0, 'partially_paid': 0, 'unpaid': 0};
+
+    try {
+      // Parse revenue_chart
+      final revenueChart = json['revenue_chart'] as Map<String, dynamic>?;
+      if (revenueChart != null) {
+        labels = (revenueChart['labels'] as List?)?.map((e) => e.toString()).toList() ?? [];
+        final datasets = revenueChart['datasets'] as List?;
+        if (datasets != null && datasets.isNotEmpty) {
+          // Dataset 0: Pendapatan
+          revenueData = (datasets[0]['data'] as List?)?.map((e) => (e as num).toDouble()).toList() ?? [];
+          // Dataset 1: Pengeluaran (jika ada)
+          if (datasets.length > 1) {
+            expensesData = (datasets[1]['data'] as List?)?.map((e) => (e as num).toDouble()).toList() ?? [];
+          }
+          // Dataset 2: Profit (jika ada)
+          if (datasets.length > 2) {
+            profitData = (datasets[2]['data'] as List?)?.map((e) => (e as num).toDouble()).toList() ?? [];
+          }
+        }
+      }
+
+      // Parse payment_status_chart
+      final paymentChart = json['payment_status_chart'] as Map<String, dynamic>?;
+      if (paymentChart != null) {
+        final datasets = paymentChart['datasets'] as List?;
+        if (datasets != null && datasets.isNotEmpty) {
+          final data = datasets[0]['data'] as List?;
+          if (data != null && data.length >= 3) {
+            invoiceStatusCounts = {
+              'paid': (data[0] as num).toInt(),
+              'partially_paid': (data[1] as num).toInt(),
+              'unpaid': (data[2] as num).toInt(),
+            };
+          }
+        }
+      }
+
+      // Parse customer_growth_chart
+      final growthChart = json['customer_growth_chart'] as Map<String, dynamic>?;
+      if (growthChart != null) {
+        final datasets = growthChart['datasets'] as List?;
+        if (datasets != null && datasets.isNotEmpty) {
+          customerGrowthData = (datasets[0]['data'] as List?)?.map((e) => (e as num).toInt()).toList() ?? [];
+          if (datasets.length > 1) {
+            customerNetData = (datasets[1]['data'] as List?)?.map((e) => (e as num).toInt()).toList() ?? [];
+          }
+        }
+      }
+
+      // Parse customer_total_chart
+      final totalChart = json['customer_total_chart'] as Map<String, dynamic>?;
+      if (totalChart != null) {
+        final datasets = totalChart['datasets'] as List?;
+        if (datasets != null && datasets.isNotEmpty) {
+          customerTotalData = (datasets[0]['data'] as List?)?.map((e) => (e as num).toInt()).toList() ?? [];
+        }
+      }
+    } catch (e) {
+      print('❌ Error parsing charts data: $e');
+    }
+
     return DashboardChartsData(
-      revenueData: (json['revenue_data'] as List?)
-              ?.map((e) => (e as num).toDouble())
-              .toList() ??
-          [],
-      expensesData: (json['expenses_data'] as List?)
-              ?.map((e) => (e as num).toDouble())
-              .toList() ??
-          [],
-      profitData: (json['profit_data'] as List?)
-              ?.map((e) => (e as num).toDouble())
-              .toList() ??
-          [],
-      customerGrowthData: (json['customer_growth_data'] as List?)
-              ?.map((e) => (e as num).toInt())
-              .toList() ??
-          [],
-      customerTotalData: (json['customer_total_data'] as List?)
-              ?.map((e) => (e as num).toInt())
-              .toList() ??
-          [],
-      customerNetData: (json['customer_net_data'] as List?)
-              ?.map((e) => (e as num).toInt())
-              .toList() ??
-          [],
-      labels:
-          (json['labels_data'] as List?)?.map((e) => e.toString()).toList() ??
-              [],
-      invoiceStatusCounts: {
-        'paid': (json['invoice_status_counts']?['paid'] as int?) ?? 0,
-        'partially_paid':
-            (json['invoice_status_counts']?['partially_paid'] as int?) ?? 0,
-        'unpaid': (json['invoice_status_counts']?['unpaid'] as int?) ?? 0,
-      },
+      revenueData: revenueData,
+      expensesData: expensesData,
+      profitData: profitData,
+      customerGrowthData: customerGrowthData,
+      customerTotalData: customerTotalData,
+      customerNetData: customerNetData,
+      labels: labels,
+      invoiceStatusCounts: invoiceStatusCounts,
     );
   }
 }
@@ -251,16 +298,38 @@ class DashboardRepository {
     }
   }
 
-  /// Get customer by ID
-  Future<ProfileModel?> getCustomerById(String customerId) async {
+  /// Get customer by ID with package info
+  Future<Map<String, dynamic>> getCustomerById(String customerId) async {
     try {
       final response = await _supabase
           .from('profiles')
-          .select()
+          .select('*, packages(*)')
           .eq('id', customerId)
           .single();
 
-      return ProfileModel.fromJson(response);
+      // Get user email using RPC
+      String? email;
+      try {
+        final emailResponse = await _supabase.rpc(
+          'get_user_email',
+          params: {'user_id': customerId},
+        );
+        email = emailResponse as String?;
+      } catch (e) {
+        print('Failed to get user email: $e');
+      }
+
+      // Build customer data with package info
+      final customerData = Map<String, dynamic>.from(response);
+      customerData['email'] = email;
+      
+      // Extract package info
+      if (response['packages'] != null) {
+        customerData['package_name'] = response['packages']['package_name'];
+        customerData['package_price'] = response['packages']['price'];
+      }
+
+      return customerData;
     } catch (e) {
       throw Exception('Failed to fetch customer: $e');
     }

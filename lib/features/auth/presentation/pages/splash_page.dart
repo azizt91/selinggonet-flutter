@@ -46,15 +46,29 @@ class _SplashPageState extends ConsumerState<SplashPage>
     authState.when(
       data: (user) {
         if (user != null) {
-          context.go('/customer/dashboard');
+          print('🔵 [Splash] User logged in: ${user.fullName}');
+          print('🔵 [Splash] Role: ${user.role}');
+          print('🔵 [Splash] isAdmin: ${user.isAdmin}');
+          
+          // Redirect based on role
+          if (user.isAdmin) {
+            print('🔵 [Splash] → Redirecting to /admin/dashboard');
+            context.go('/admin/dashboard');
+          } else {
+            print('🔵 [Splash] → Redirecting to /customer/dashboard');
+            context.go('/customer/dashboard');
+          }
         } else {
+          print('🔵 [Splash] No user, redirecting to /login');
           context.go('/login');
         }
       },
       loading: () {
+        print('🔵 [Splash] Auth state loading...');
         // Wait for auth state to load
       },
-      error: (_, __) {
+      error: (error, stack) {
+        print('❌ [Splash] Auth error: $error');
         context.go('/login');
       },
     );

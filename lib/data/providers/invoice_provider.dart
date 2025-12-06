@@ -239,3 +239,6 @@ final invoiceControllerProvider =
     StateNotifierProvider<InvoiceController, AsyncValue<void>>((ref) {
   return InvoiceController(ref.read(invoiceRepositoryProvider));
 });
+
+// Alias for backward compatibility
+final invoicesByStatusProvider = invoicesProvider;

@@ -44,6 +44,9 @@ final dashboardChartsDataProvider = FutureProvider.autoDispose((ref) async {
   return repository.getDashboardChartsData(months: 6);
 });
 
+// Alias for dashboard charts (used in admin dashboard)
+final dashboardChartsProvider = dashboardChartsDataProvider;
+
 // All Customers Provider with filter and search
 final customersFilterProvider = StateProvider<String>((ref) => 'all');
 final customersSearchProvider = StateProvider<String>((ref) => '');
@@ -57,14 +60,17 @@ final allCustomersProvider = FutureProvider.autoDispose((ref) async {
 });
 
 // Customer Detail Provider
-final customerDetailProvider = FutureProvider.autoDispose.family<dynamic, String>((ref, customerId) async {
+final customerDetailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, customerId) async {
   final repository = ref.watch(dashboardRepositoryProvider);
   
   final customer = await repository.getCustomerById(customerId);
   final invoices = await repository.getCustomerInvoices(customerId);
   
+  // Convert invoices to list of maps
+  final invoicesList = invoices.map((inv) => inv.toJson()).toList();
+  
   return {
     'customer': customer,
-    'invoices': invoices,
+    'invoices': invoicesList,
   };
 });

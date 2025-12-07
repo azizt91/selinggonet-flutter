@@ -61,8 +61,11 @@ class NotificationRepository {
 
   Future<int> getUnreadCount(String userId) async {
     try {
-      final notifications = await getNotifications(userId);
-      return notifications.where((n) => !n.isRead).length;
+      // Use RPC function for better performance
+      final result = await _supabase.rpc('get_unread_notification_count', params: {
+        'user_id_param': userId,
+      });
+      return result as int? ?? 0;
     } catch (e) {
       print('Error getting unread count: $e');
       return 0;
@@ -71,11 +74,12 @@ class NotificationRepository {
 
   Future<bool> markAsRead(String notificationId, String userId) async {
     try {
-      await _supabase.from('notification_reads').upsert({
-        'notification_id': notificationId,
-        'user_id': userId,
+      // Use RPC function for better security
+      final result = await _supabase.rpc('mark_notification_read', params: {
+        'notification_id_param': notificationId,
+        'user_id_param': userId,
       });
-      return true;
+      return result == true;
     } catch (e) {
       print('Error marking notification as read: $e');
       return false;

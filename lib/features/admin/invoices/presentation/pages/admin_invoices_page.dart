@@ -21,7 +21,6 @@ class InvoiceModel {
   final String customerId;
   final String? customerIdpl;
   final String? customerWhatsapp;
-  final String? customerEmail;
 
   InvoiceModel({
     required this.id,
@@ -36,7 +35,6 @@ class InvoiceModel {
     required this.customerId,
     this.customerIdpl,
     this.customerWhatsapp,
-    this.customerEmail,
   });
 
   factory InvoiceModel.fromJson(Map<String, dynamic> json) {
@@ -54,7 +52,6 @@ class InvoiceModel {
       customerId: json['customer_id']?.toString() ?? '',
       customerIdpl: profile?['idpl']?.toString(),
       customerWhatsapp: profile?['whatsapp_number']?.toString(),
-      customerEmail: profile?['email']?.toString(),
     );
   }
 }
@@ -68,7 +65,7 @@ final invoicesProvider = FutureProvider.autoDispose<List<InvoiceModel>>((ref) as
   final filter = ref.watch(invoicesFilterProvider);
   final search = ref.watch(invoicesSearchProvider);
 
-  var query = supabase.from('invoices').select('*, profiles(full_name, idpl, whatsapp_number, email)');
+  var query = supabase.from('invoices').select('*, profiles(full_name, idpl, whatsapp_number)');
 
   if (filter == 'unpaid') {
     query = query.eq('status', 'unpaid');
@@ -767,6 +764,17 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
         settings[s['setting_key']] = s['setting_value']?.toString() ?? '';
       }
 
+      // Get customer email using RPC function
+      String customerEmail = 'email_login_anda';
+      try {
+        final emailResult = await supabase.rpc('get_user_email', params: {'user_id': invoice.customerId});
+        if (emailResult != null) {
+          customerEmail = emailResult.toString();
+        }
+      } catch (e) {
+        debugPrint('Failed to get customer email: $e');
+      }
+
       // Format phone number
       String phone = invoice.customerWhatsapp!.replaceAll(RegExp(r'[^0-9]'), '');
       if (phone.startsWith('0')) {
@@ -797,7 +805,7 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
           .replaceAll('{sisa_tagihan}', currencyFormat.format(0))
           .replaceAll('{metode_pembayaran}', methodText)
           .replaceAll('{app_url}', settings['app_url'] ?? '')
-          .replaceAll('{email_pelanggan}', invoice.customerEmail ?? '-');
+          .replaceAll('{email_pelanggan}', customerEmail);
 
       // Call Supabase Edge Function
       await supabase.functions.invoke('send-whatsapp-notification', body: {
@@ -960,55 +968,181 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
     }
   }
 
-  void _showInvoiceDetail(InvoiceModel invoice) {
+  Future<void> _showInvoiceDetail(InvoiceModel invoice) async {
     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
     final dateFormat = DateFormat('d MMMM yyyy, HH:mm', 'id_ID');
+
+    // Fetch payment history using RPC
+    List<Map<String, dynamic>> paymentHistory = [];
+    try {
+      final supabase = ref.read(supabaseClientProvider);
+      final response = await supabase.rpc('get_payment_history', params: {'p_invoice_id': invoice.id});
+      
+      if (response != null && response['success'] == true) {
+        final data = response['data'];
+        if (data != null && data['payment_history'] != null) {
+          paymentHistory = List<Map<String, dynamic>>.from(data['payment_history']);
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch payment history: $e');
+    }
+
+    if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(20)),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
                 children: [
-                  Icon(Icons.check_circle, color: Color(0xFF15803D), size: 20),
-                  SizedBox(width: 8),
-                  Text('LUNAS', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
+                  Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(20)),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle, color: Color(0xFF15803D), size: 20),
+                        SizedBox(width: 8),
+                        Text('LUNAS', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            _buildDetailRow('Pelanggan', invoice.customerName),
-            _buildDetailRow('ID Pelanggan', invoice.customerIdpl ?? '-'),
-            _buildDetailRow('Periode', invoice.invoicePeriod),
-            _buildDetailRow('Jumlah', currencyFormat.format(invoice.totalDue)),
-            _buildDetailRow('Tanggal Bayar', invoice.paidAt != null ? dateFormat.format(invoice.paidAt!) : '-'),
-            _buildDetailRow('Metode', invoice.paymentMethod ?? '-'),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(ctx),
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF683FE4), padding: const EdgeInsets.symmetric(vertical: 14)),
-                child: const Text('Tutup', style: TextStyle(color: Colors.white)),
+            // Content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDetailRow('Pelanggan', invoice.customerName),
+                    _buildDetailRow('ID Pelanggan', invoice.customerIdpl ?? '-'),
+                    _buildDetailRow('Periode', invoice.invoicePeriod),
+                    _buildDetailRow('Total Tagihan', currencyFormat.format(invoice.totalDue)),
+                    _buildDetailRow('Tanggal Lunas', invoice.paidAt != null ? dateFormat.format(invoice.paidAt!) : '-'),
+                    _buildDetailRow('Metode Terakhir', invoice.paymentMethod ?? '-'),
+                    
+                    // Payment History Section
+                    if (paymentHistory.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      const Divider(),
+                      const SizedBox(height: 12),
+                      const Text('Riwayat Pembayaran', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF110E1B))),
+                      const SizedBox(height: 12),
+                      ...paymentHistory.map((payment) => _buildPaymentHistoryItem(payment, currencyFormat)),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            // Footer
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF683FE4), padding: const EdgeInsets.symmetric(vertical: 14)),
+                  child: const Text('Tutup', style: TextStyle(color: Colors.white)),
+                ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentHistoryItem(Map<String, dynamic> payment, NumberFormat currencyFormat) {
+    final amount = (payment['amount'] as num?)?.toDouble() ?? 0;
+    final method = payment['payment_method']?.toString() ?? '-';
+    final admin = payment['admin_name']?.toString() ?? '-';
+    final note = payment['note']?.toString() ?? '';
+    
+    // Parse date
+    String dateStr = '-';
+    if (payment['paid_at'] != null) {
+      try {
+        final date = DateTime.parse(payment['paid_at'].toString());
+        dateStr = DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(date);
+      } catch (e) {
+        dateStr = payment['paid_at'].toString();
+      }
+    }
+
+    final methodText = {
+      'cash': 'Tunai',
+      'transfer': 'Transfer',
+      'e-wallet': 'E-Wallet',
+      'qris': 'QRIS',
+    }[method] ?? method;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9F8FB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(currencyFormat.format(amount), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF22C55E))),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(8)),
+                child: Text(methodText, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF7C3AED))),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.calendar_today, size: 12, color: Colors.grey[500]),
+              const SizedBox(width: 4),
+              Text(dateStr, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(Icons.person_outline, size: 12, color: Colors.grey[500]),
+              const SizedBox(width: 4),
+              Text('Diproses oleh: $admin', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            ],
+          ),
+          if (note.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.note_outlined, size: 12, color: Colors.grey[500]),
+                const SizedBox(width: 4),
+                Expanded(child: Text(note, style: TextStyle(fontSize: 12, color: Colors.grey[600]))),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

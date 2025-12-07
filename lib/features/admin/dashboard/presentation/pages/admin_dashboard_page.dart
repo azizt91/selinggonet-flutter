@@ -147,8 +147,8 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
     final year = ref.read(selectedYearProvider);
     return Column(children: [
       _largeCard('Profit', f.format(s.profit), Icons.account_balance_wallet, [const Color(0xFF9969C7), const Color(0xFF6A359C)], _showProfit, () => setState(() => _showProfit = !_showProfit)),
-      const SizedBox(height: 12),
-      GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.15, children: [
+      const SizedBox(height: 10),
+      GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 1.2, children: [
         _smallToggle('Pendapatan', f.format(s.totalRevenue), Icons.trending_up, [const Color(0xFF004e92), const Color(0xFF000428)], _showPendapatan, () => setState(() => _showPendapatan = !_showPendapatan)),
         _smallToggle('Pengeluaran', f.format(s.totalExpenses), Icons.trending_down, [const Color(0xFF485563), const Color(0xFF29323c)], _showPengeluaran, () => setState(() => _showPengeluaran = !_showPengeluaran)),
         _smallCard('Pelanggan Aktif', s.activeCustomers.toString(), Icons.people, [const Color(0xFF1e3c72), const Color(0xFF2a5298)], () => ctx.push('/admin/customers?status=AKTIF')),
@@ -161,16 +161,16 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
   Widget _largeCard(String l, String v, IconData icon, List<Color> g, bool vis, VoidCallback t) => Container(
     width: double.infinity,
     clipBehavior: Clip.hardEdge,
-    decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: g), borderRadius: BorderRadius.circular(20),
-      boxShadow: [BoxShadow(color: g[0].withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 6))]),
-    padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: g), borderRadius: BorderRadius.circular(16),
+      boxShadow: [BoxShadow(color: g[0].withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))]),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Icon(icon, size: 36, color: Colors.white.withOpacity(0.9)),
+        Icon(icon, size: 32, color: Colors.white.withOpacity(0.9)),
         _eye(vis, t)]),
-      const SizedBox(height: 12),
-      Text(l, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14, fontWeight: FontWeight.w500)),
-      const SizedBox(height: 4),
-      Text(vis ? v : 'Rp •••••••', style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)]));
+      const SizedBox(height: 8),
+      Text(l, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.w500)),
+      const SizedBox(height: 2),
+      Text(vis ? v : 'Rp •••••••', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)]));
 
   Widget _smallToggle(String l, String v, IconData icon, List<Color> g, bool vis, VoidCallback t) => Container(
     clipBehavior: Clip.hardEdge,

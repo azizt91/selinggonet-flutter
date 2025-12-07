@@ -3,9 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:printing/printing.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
 import '../../../../../data/providers/auth_provider.dart';
 
 // Report Data Model
@@ -986,66 +983,54 @@ class _AdminReportsPageState extends ConsumerState<AdminReportsPage> {
       final dateFormat = DateFormat('dd/MM/yyyy', 'id_ID');
       final netIncome = data.totalPendapatan - data.totalPengeluaran;
 
-      final pdf = pw.Document();
+      // Generate text report for PDF-like format
+      final buffer = StringBuffer();
+      buffer.writeln('═══════════════════════════════════════════');
+      buffer.writeln('           LAPORAN KEUANGAN');
+      buffer.writeln('═══════════════════════════════════════════');
+      buffer.writeln('Tanggal Cetak: ${dateFormat.format(DateTime.now())}');
+      buffer.writeln('');
+      buffer.writeln('RINGKASAN:');
+      buffer.writeln('───────────────────────────────────────────');
+      buffer.writeln('Total Pendapatan (Lunas): ${_currencyFormat.format(data.totalPendapatan)}');
+      buffer.writeln('Total Pengeluaran: ${_currencyFormat.format(data.totalPengeluaran)}');
+      buffer.writeln('Pendapatan Bersih: ${_currencyFormat.format(netIncome)}');
+      buffer.writeln('Total Belum Bayar: ${_currencyFormat.format(data.totalUnpaid)}');
+      buffer.writeln('Total Cicilan: ${_currencyFormat.format(data.totalInstallment)}');
+      buffer.writeln('');
+      buffer.writeln('Jumlah Data: ${data.countLunas + data.countUnpaid + data.countInstallment} tagihan, ${data.countPengeluaran} pengeluaran');
+      buffer.writeln('');
+      buffer.writeln('DATA TRANSAKSI:');
+      buffer.writeln('───────────────────────────────────────────');
 
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(32),
-          build: (context) => [
-            pw.Text('LAPORAN KEUANGAN',
-                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 8),
-            pw.Text('Tanggal Cetak: ${dateFormat.format(DateTime.now())}'),
-            pw.SizedBox(height: 20),
-            pw.Text('RINGKASAN:',
-                style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 8),
-            pw.Text('Total Pendapatan (Lunas): ${_currencyFormat.format(data.totalPendapatan)}'),
-            pw.Text('Total Pengeluaran: ${_currencyFormat.format(data.totalPengeluaran)}'),
-            pw.Text('Pendapatan Bersih: ${_currencyFormat.format(netIncome)}'),
-            pw.Text('Total Belum Bayar: ${_currencyFormat.format(data.totalUnpaid)}'),
-            pw.Text('Jumlah Data: ${data.countLunas + data.countUnpaid + data.countInstallment} tagihan, ${data.countPengeluaran} pengeluaran'),
-            pw.SizedBox(height: 20),
-            pw.Text('DATA TRANSAKSI:',
-                style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 8),
-            pw.TableHelper.fromTextArray(
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
-              cellStyle: const pw.TextStyle(fontSize: 8),
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-              headers: ['No', 'Nama', 'Keterangan', 'Jumlah', 'Status', 'Tanggal'],
-              data: data.items.take(100).toList().asMap().entries.map((entry) {
-                final item = entry.value;
-                final isExpense = item.type == 'expense';
-                return [
-                  '${entry.key + 1}',
-                  item.customerName,
-                  item.description,
-                  '${isExpense ? '-' : '+'}${_currencyFormat.format(item.amount)}',
-                  _getStatusText(item.status),
-                  dateFormat.format(item.date),
-                ];
-              }).toList(),
-            ),
-          ],
-        ),
-      );
+      for (var i = 0; i < data.items.take(100).length; i++) {
+        final item = data.items[i];
+        final isExpense = item.type == 'expense';
+        buffer.writeln('${i + 1}. ${item.customerName}');
+        buffer.writeln('   ${item.description} | ${dateFormat.format(item.date)}');
+        buffer.writeln('   ${isExpense ? '-' : '+'}${_currencyFormat.format(item.amount)} | ${_getStatusText(item.status)}');
+        buffer.writeln('');
+      }
 
-      await Printing.layoutPdf(
-        onLayout: (format) async => pdf.save(),
-        name: 'Laporan_Keuangan_${DateTime.now().millisecondsSinceEpoch}',
-      );
+      if (data.items.length > 100) {
+        buffer.writeln('... dan ${data.items.length - 100} data lainnya');
+      }
+
+      buffer.writeln('═══════════════════════════════════════════');
+
+      // Copy to clipboard
+      await Clipboard.setData(ClipboardData(text: buffer.toString()));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('✅ PDF berhasil dibuat!'),
-            backgroundColor: Color(0xFF22C55E)));
+            content: Text('✅ Laporan disalin ke clipboard!'),
+            backgroundColor: Color(0xFF22C55E),
+            duration: Duration(seconds: 3)));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('❌ Gagal export PDF: $e'),
+            content: Text('❌ Gagal export: $e'),
             backgroundColor: const Color(0xFFDC2626)));
       }
     } finally {

@@ -81,12 +81,7 @@ dependencies:
   # Color Picker
   flutter_colorpicker: ^1.1.0
 
-  # PDF & Excel Export
-  pdf: ^3.10.8
-  printing: ^5.12.0
-  excel: ^4.0.3
-  share_plus: ^9.0.0
-  open_filex: ^4.4.0
+
 
 dev_dependencies:
   flutter_test:

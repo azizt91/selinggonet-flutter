@@ -37,9 +37,7 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FE),
         body: Column(children: [
-          // Fixed Header
           _header(user, month, year),
-          // Scrollable Content
           Expanded(child: RefreshIndicator(
             onRefresh: () async { ref.invalidate(dashboardStatsProvider); ref.invalidate(dashboardChartsProvider); },
             child: ListView(padding: EdgeInsets.zero, children: [
@@ -61,47 +59,25 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
 
   Widget _header(AsyncValue<dynamic> user, int month, int year) {
     final unreadCount = ref.watch(unreadNotificationCountProvider);
-    
     return Container(
       clipBehavior: Clip.hardEdge,
       decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF667EEA), Color(0xFF5324E0)]),
         borderRadius: BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24))),
       child: SafeArea(bottom: false, child: Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 18), child: Column(mainAxisSize: MainAxisSize.min, children: [
         Row(children: [_avatar(user), const SizedBox(width: 10), Expanded(child: _userInfo(user)),
-          // Notification Bell with Badge
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminNotificationsPage())),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-              ),
-              unreadCount.when(
-                data: (count) => count > 0
-                    ? Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                          constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                          child: Text(
-                            count > 99 ? '99+' : count.toString(),
-                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-            ],
-          ),
+          Stack(children: [
+            IconButton(icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminNotificationsPage())),
+              padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36)),
+            unreadCount.when(
+              data: (count) => count > 0 ? Positioned(right: 0, top: 0, child: Container(
+                padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                child: Text(count > 99 ? '99+' : count.toString(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold), textAlign: TextAlign.center))) : const SizedBox.shrink(),
+              loading: () => const SizedBox.shrink(), error: (_, __) => const SizedBox.shrink())]),
           IconButton(icon: const Icon(Icons.logout, color: Colors.white, size: 22), onPressed: _logout, padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36))]),
         const SizedBox(height: 6),
-        Text(DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(DateTime.now()), style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 11)),
+        Text(DateFormat('d MMMM yyyy', 'id_ID').format(DateTime.now()) + ' pukul ' + DateFormat('HH.mm.ss', 'id_ID').format(DateTime.now()) + ' WIB', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 11)),
         const SizedBox(height: 10),
         Row(children: [Expanded(child: _monthFilter(month)), const SizedBox(width: 10), Expanded(child: _yearFilter(year))]),
       ]))));
@@ -147,7 +123,7 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
     final year = ref.read(selectedYearProvider);
     return Column(children: [
       _largeCard('Profit', f.format(s.profit), Icons.account_balance_wallet, [const Color(0xFF9969C7), const Color(0xFF6A359C)], _showProfit, () => setState(() => _showProfit = !_showProfit)),
-      const SizedBox(height: 10),
+      const SizedBox(height: 8),
       GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 1.2, children: [
         _smallToggle('Pendapatan', f.format(s.totalRevenue), Icons.trending_up, [const Color(0xFF004e92), const Color(0xFF000428)], _showPendapatan, () => setState(() => _showPendapatan = !_showPendapatan)),
         _smallToggle('Pengeluaran', f.format(s.totalExpenses), Icons.trending_down, [const Color(0xFF485563), const Color(0xFF29323c)], _showPengeluaran, () => setState(() => _showPengeluaran = !_showPengeluaran)),
@@ -159,14 +135,11 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
   }
 
   Widget _largeCard(String l, String v, IconData icon, List<Color> g, bool vis, VoidCallback t) => Container(
-    width: double.infinity,
-    clipBehavior: Clip.hardEdge,
+    width: double.infinity, clipBehavior: Clip.hardEdge,
     decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: g), borderRadius: BorderRadius.circular(16),
       boxShadow: [BoxShadow(color: g[0].withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))]),
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Icon(icon, size: 32, color: Colors.white.withOpacity(0.9)),
-        _eye(vis, t)]),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Icon(icon, size: 32, color: Colors.white.withOpacity(0.9)), _eye(vis, t)]),
       const SizedBox(height: 8),
       Text(l, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.w500)),
       const SizedBox(height: 2),
@@ -200,163 +173,323 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
     child: Icon(vis ? Icons.visibility : Icons.visibility_off, color: Colors.white.withOpacity(0.9), size: s ? 16 : 20)));
 
   Widget _chartsSection(dynamic d) => d == null ? const SizedBox.shrink() : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    _chartCardWithLegend('Pendapatan, Pengeluaran & Profit', '6 bulan terakhir', SizedBox(height: 220, child: _revenueChart(d)),
-      legends: [('Pendapatan', const Color(0xFF10B981)), ('Pengeluaran', const Color(0xFFEF4444)), ('Profit', const Color(0xFF8B5CF6))]),
-    const SizedBox(height: 16),
+    _revenueChartCard(d),
+    const SizedBox(height: 12),
     _chartCard('Status Pembayaran', 'Bulan ini', SizedBox(height: 200, child: _paymentChart(d))),
-    const SizedBox(height: 16),
+    const SizedBox(height: 12),
     _chartCard('Pertumbuhan Pelanggan', 'Baru vs Cabut', SizedBox(height: 200, child: _growthChart(d))),
-    const SizedBox(height: 16),
+    const SizedBox(height: 12),
     _chartCard('Total Pelanggan Aktif', 'Kumulatif 6 bulan', SizedBox(height: 200, child: _totalChart(d)))]);
 
-  Widget _chartCard(String t, String s, Widget c) => Container(padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))]),
+  // Chart card container - sama seperti web (bg-white rounded-2xl shadow-lg p-6)
+  Widget _chartCard(String t, String s, Widget c) => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))],
+    ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Flexible(child: Text(t, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)))),
-        Row(children: [Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)), const SizedBox(width: 6), Text(s, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)))])]),
-      const SizedBox(height: 16), c]));
+        Flexible(child: Text(t, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)))),
+        Row(children: [
+          Container(width: 10, height: 10, decoration: const BoxDecoration(color: Color(0xFF3B82F6), shape: BoxShape.circle)),
+          const SizedBox(width: 8),
+          Text(s, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+        ]),
+      ]),
+      const SizedBox(height: 20),
+      c,
+    ]),
+  );
 
-  Widget _chartCardWithLegend(String t, String s, Widget c, {required List<(String, Color)> legends}) => Container(padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))]),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Flexible(child: Text(t, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)))),
-        Text(s, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)))]),
-      const SizedBox(height: 10),
-      Wrap(spacing: 16, runSpacing: 6, children: legends.map((l) => Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 10, height: 10, decoration: BoxDecoration(color: l.$2, borderRadius: BorderRadius.circular(3))),
-        const SizedBox(width: 6),
-        Text(l.$1, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)))])).toList()),
-      const SizedBox(height: 12), c]));
-
-  Widget _revenueChart(dynamic d) {
+  // Revenue chart card - sama seperti web (Pendapatan & Profit)
+  Widget _revenueChartCard(dynamic d) {
     final lb = d.labels as List<String>? ?? [];
     final rv = d.revenueData as List<double>? ?? [];
     final ex = d.expensesData as List<double>? ?? [];
     final pf = d.profitData as List<double>? ?? [];
-    if (lb.isEmpty || rv.isEmpty) return _noData();
+    if (lb.isEmpty || rv.isEmpty) return _chartCard('Pendapatan & Profit', '6 bulan terakhir', _noData());
     
-    // Gabungkan semua data untuk menentukan interval
     final allData = [...rv, ...ex, ...pf];
+    final f = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
     
-    return LineChart(LineChartData(
-      gridData: FlGridData(show: true, drawVerticalLine: false, horizontalInterval: _int(allData.map((e) => e as num).toList())),
-      titlesData: FlTitlesData(
-        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40, getTitlesWidget: (v, _) => Text(_cmp(v), style: const TextStyle(fontSize: 8, color: Colors.grey)))),
-        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, interval: 1, getTitlesWidget: (v, _) { final i = v.toInt(); return i >= 0 && i < lb.length && v == i.toDouble() ? Padding(padding: const EdgeInsets.only(top: 4), child: Text(lb[i], style: const TextStyle(fontSize: 7, color: Colors.grey))) : const SizedBox.shrink(); })),
-        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)), 
-        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false))),
-      borderData: FlBorderData(show: false), 
-      lineBarsData: [
-        // Pendapatan - Hijau
-        LineChartBarData(spots: rv.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(), isCurved: true, color: const Color(0xFF10B981), barWidth: 2.5, dotData: const FlDotData(show: false), belowBarData: BarAreaData(show: true, color: const Color(0xFF10B981).withOpacity(0.1))),
-        // Pengeluaran - Merah
-        if (ex.isNotEmpty) LineChartBarData(spots: ex.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(), isCurved: true, color: const Color(0xFFEF4444), barWidth: 2.5, dotData: const FlDotData(show: false), belowBarData: BarAreaData(show: true, color: const Color(0xFFEF4444).withOpacity(0.1))),
-        // Profit - Ungu
-        if (pf.isNotEmpty) LineChartBarData(spots: pf.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(), isCurved: true, color: const Color(0xFF8B5CF6), barWidth: 2.5, dotData: const FlDotData(show: false), belowBarData: BarAreaData(show: true, color: const Color(0xFF8B5CF6).withOpacity(0.1)))]));
+    // Warna sama seperti web Chart.js
+    const colorPendapatan = Color(0xFF22C55E); // green-500
+    const colorPengeluaran = Color(0xFFEF4444); // red-500
+    const colorProfit = Color(0xFF8B5CF6); // violet-500
+    
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          const Flexible(child: Text('Pendapatan & Profit', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)))),
+          Row(children: [
+            Container(width: 10, height: 10, decoration: BoxDecoration(color: colorPendapatan, shape: BoxShape.circle)),
+            const SizedBox(width: 8),
+            const Text('6 bulan terakhir', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+          ]),
+        ]),
+        const SizedBox(height: 12),
+        // Legend seperti web - dengan usePointStyle
+        Wrap(spacing: 16, runSpacing: 8, children: [
+          _legendItem('Pendapatan', colorPendapatan),
+          _legendItem('Pengeluaran', colorPengeluaran),
+          _legendItem('Profit', colorProfit),
+        ]),
+        const SizedBox(height: 12),
+        SizedBox(height: 220, child: LineChart(LineChartData(
+          lineTouchData: LineTouchData(
+            enabled: true,
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipColor: (_) => const Color(0xFF1F2937),
+              tooltipRoundedRadius: 8,
+              tooltipPadding: const EdgeInsets.all(10),
+              getTooltipItems: (touchedSpots) {
+                if (touchedSpots.isEmpty) return [];
+                final idx = touchedSpots.first.x.toInt();
+                final month = idx >= 0 && idx < lb.length ? lb[idx] : '';
+                return touchedSpots.asMap().entries.map((e) {
+                  final spot = e.value;
+                  String label = '';
+                  Color color = Colors.white;
+                  if (spot.barIndex == 0) { label = 'Pendapatan'; color = colorPendapatan; }
+                  else if (spot.barIndex == 1) { label = 'Pengeluaran'; color = colorPengeluaran; }
+                  else if (spot.barIndex == 2) { label = 'Profit'; color = colorProfit; }
+                  return LineTooltipItem(
+                    e.key == 0 ? '$month\n$label: ${f.format(spot.y)}' : '$label: ${f.format(spot.y)}',
+                    TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500),
+                  );
+                }).toList();
+              },
+            ),
+            handleBuiltInTouches: true,
+          ),
+          gridData: FlGridData(show: true, drawVerticalLine: false, horizontalInterval: _int(allData.map((e) => e as num).toList())),
+          titlesData: FlTitlesData(
+            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40, getTitlesWidget: (v, _) => Text(_cmp(v), style: const TextStyle(fontSize: 8, color: Colors.grey)))),
+            bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, interval: 1, getTitlesWidget: (v, _) { final i = v.toInt(); return i >= 0 && i < lb.length && v == i.toDouble() ? Padding(padding: const EdgeInsets.only(top: 4), child: Text(lb[i], style: const TextStyle(fontSize: 7, color: Colors.grey))) : const SizedBox.shrink(); })),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)), 
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false))),
+          borderData: FlBorderData(show: false), 
+          lineBarsData: [
+            // Pendapatan - hijau seperti web
+            LineChartBarData(
+              spots: rv.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
+              isCurved: true, curveSmoothness: 0.3,
+              color: colorPendapatan, barWidth: 3,
+              dotData: FlDotData(show: true, getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(radius: 4, color: colorPendapatan, strokeWidth: 2, strokeColor: Colors.white)),
+              belowBarData: BarAreaData(show: true, color: colorPendapatan.withOpacity(0.15)),
+            ),
+            // Pengeluaran - merah seperti web
+            if (ex.isNotEmpty) LineChartBarData(
+              spots: ex.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
+              isCurved: true, curveSmoothness: 0.3,
+              color: colorPengeluaran, barWidth: 3,
+              dotData: FlDotData(show: true, getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(radius: 4, color: colorPengeluaran, strokeWidth: 2, strokeColor: Colors.white)),
+              belowBarData: BarAreaData(show: true, color: colorPengeluaran.withOpacity(0.15)),
+            ),
+            // Profit - ungu seperti web
+            if (pf.isNotEmpty) LineChartBarData(
+              spots: pf.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
+              isCurved: true, curveSmoothness: 0.3,
+              color: colorProfit, barWidth: 3,
+              dotData: FlDotData(show: true, getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(radius: 4, color: colorProfit, strokeWidth: 2, strokeColor: Colors.white)),
+              belowBarData: BarAreaData(show: true, color: colorProfit.withOpacity(0.15)),
+            ),
+          ],
+        ))),
+      ]));
   }
 
+  // Legend item dengan point style seperti web Chart.js
+  Widget _legendItem(String label, Color color) => Row(mainAxisSize: MainAxisSize.min, children: [
+    Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+    const SizedBox(width: 8),
+    Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF374151)))]);
+
+  // Payment Status Doughnut Chart - sama seperti web
   Widget _paymentChart(dynamic d) {
     final counts = d.invoiceStatusCounts as Map<String, int>? ?? {};
     if (counts.isEmpty) return _noData();
     final lb = ['Lunas', 'Cicilan', 'Belum Bayar'];
     final vl = [counts['paid'] ?? 0, counts['partially_paid'] ?? 0, counts['unpaid'] ?? 0];
-    final cl = [const Color(0xFF10B981), const Color(0xFFF59E0B), const Color(0xFFEF4444)];
-    return Row(children: [Expanded(flex: 2, child: PieChart(PieChartData(sectionsSpace: 2, centerSpaceRadius: 30, sections: vl.asMap().entries.map((e) {
-      final t = vl.fold<int>(0, (a, b) => a + b); final p = t > 0 ? (e.value / t * 100) : 0;
-      return PieChartSectionData(value: e.value.toDouble(), color: cl[e.key % cl.length], radius: 22, title: '${p.toStringAsFixed(0)}%', titleStyle: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white));
-    }).toList()))), const SizedBox(width: 10),
-      Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: lb.asMap().entries.map((e) => Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: Row(children: [
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: cl[e.key % cl.length], borderRadius: BorderRadius.circular(2))), const SizedBox(width: 4), Expanded(child: Text(e.value, style: const TextStyle(fontSize: 9), overflow: TextOverflow.ellipsis))]))).toList()))]);
+    // Warna sama seperti web
+    final cl = [const Color(0xFF22C55E), const Color(0xFFF59E0B), const Color(0xFFEF4444)];
+    final total = vl.fold<int>(0, (a, b) => a + b);
+    
+    return Row(children: [
+      // Doughnut chart dengan cutout 60% seperti web
+      Expanded(flex: 3, child: PieChart(PieChartData(
+        sectionsSpace: 3,
+        centerSpaceRadius: 50, // cutout 60%
+        sections: vl.asMap().entries.map((e) {
+          final p = total > 0 ? (e.value / total * 100) : 0;
+          return PieChartSectionData(
+            value: e.value.toDouble(),
+            color: cl[e.key % cl.length],
+            radius: 35,
+            title: p > 5 ? '${p.toStringAsFixed(0)}%' : '',
+            titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+            titlePositionPercentageOffset: 0.55,
+          );
+        }).toList(),
+      ))),
+      const SizedBox(width: 16),
+      // Legend di bawah seperti web
+      Expanded(flex: 2, child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: lb.asMap().entries.map((e) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(children: [
+            Container(width: 12, height: 12, decoration: BoxDecoration(color: cl[e.key % cl.length], shape: BoxShape.circle)),
+            const SizedBox(width: 8),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(e.value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+                Text('${vl[e.key]} tagihan', style: const TextStyle(fontSize: 10, color: Color(0xFF6B7280))),
+              ],
+            )),
+          ]),
+        )).toList(),
+      )),
+    ]);
   }
 
+  // Customer Growth Bar Chart - sama seperti web (Baru vs Cabut)
   Widget _growthChart(dynamic d) {
     final lb = d.labels as List<String>? ?? [];
     final nw = d.customerGrowthData as List<int>? ?? [];
     final ch = d.customerNetData as List<int>? ?? [];
     if (lb.isEmpty || nw.isEmpty) return _noData();
-    return BarChart(BarChartData(gridData: const FlGridData(show: true, drawVerticalLine: false),
-      titlesData: FlTitlesData(leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 22, getTitlesWidget: (v, _) => Text(v.toInt().toString(), style: const TextStyle(fontSize: 8, color: Colors.grey)))),
-        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, interval: 1, getTitlesWidget: (v, _) { final i = v.toInt(); return i >= 0 && i < lb.length && v == i.toDouble() ? Padding(padding: const EdgeInsets.only(top: 4), child: Text(lb[i], style: const TextStyle(fontSize: 7, color: Colors.grey))) : const SizedBox.shrink(); })),
-        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)), rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false))),
-      borderData: FlBorderData(show: false), barGroups: List.generate(lb.length, (i) => BarChartGroupData(x: i, barRods: [
-        BarChartRodData(toY: nw[i].toDouble(), color: const Color(0xFF10B981), width: 8, borderRadius: BorderRadius.circular(2)),
-        if (ch.isNotEmpty && i < ch.length) BarChartRodData(toY: ch[i].abs().toDouble(), color: const Color(0xFFEF4444), width: 8, borderRadius: BorderRadius.circular(2))]))));
+    
+    // Warna sama seperti web
+    const colorBaru = Color(0xFF22C55E);
+    const colorCabut = Color(0xFFEF4444);
+    
+    return Column(children: [
+      // Legend di atas seperti web
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          _legendItem('Pelanggan Baru', colorBaru),
+          const SizedBox(width: 20),
+          _legendItem('Pelanggan Cabut', colorCabut),
+        ]),
+      ),
+      Expanded(child: BarChart(BarChartData(
+        gridData: FlGridData(show: true, drawVerticalLine: false, getDrawingHorizontalLine: (v) => FlLine(color: Colors.grey.withOpacity(0.2), strokeWidth: 1)),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 28, getTitlesWidget: (v, _) => Text(v.toInt().toString(), style: const TextStyle(fontSize: 10, color: Color(0xFF6B7280))))),
+          bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, interval: 1, reservedSize: 32, getTitlesWidget: (v, _) {
+            final i = v.toInt();
+            if (i < 0 || i >= lb.length || v != i.toDouble()) return const SizedBox.shrink();
+            // Singkat nama bulan agar tidak rapat
+            final shortMonth = lb[i].length > 3 ? lb[i].substring(0, 3) : lb[i];
+            return Padding(padding: const EdgeInsets.only(top: 8), child: Text(shortMonth, style: const TextStyle(fontSize: 9, color: Color(0xFF6B7280))));
+          })),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        borderData: FlBorderData(show: false),
+        barGroups: List.generate(lb.length, (i) => BarChartGroupData(
+          x: i,
+          barsSpace: 2,
+          barRods: [
+            BarChartRodData(toY: nw[i].toDouble(), color: colorBaru, width: 10, borderRadius: BorderRadius.circular(3)),
+            if (ch.isNotEmpty && i < ch.length) BarChartRodData(toY: ch[i].abs().toDouble(), color: colorCabut, width: 10, borderRadius: BorderRadius.circular(3)),
+          ],
+        )),
+        barTouchData: BarTouchData(
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipColor: (_) => const Color(0xFF1F2937),
+            tooltipRoundedRadius: 8,
+            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+              final label = rodIndex == 0 ? 'Baru' : 'Cabut';
+              return BarTooltipItem('$label: ${rod.toY.toInt()} pelanggan', const TextStyle(color: Colors.white, fontSize: 12));
+            },
+          ),
+        ),
+      ))),
+    ]);
   }
 
+  // Total Active Customers Line Chart - sama seperti web
   Widget _totalChart(dynamic d) {
     final lb = d.labels as List<String>? ?? [];
     final vl = d.customerTotalData as List<int>? ?? [];
     if (lb.isEmpty || vl.isEmpty) return _noData();
-    return LineChart(LineChartData(gridData: const FlGridData(show: true, drawVerticalLine: false),
-      titlesData: FlTitlesData(leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 22, getTitlesWidget: (v, _) => Text(v.toInt().toString(), style: const TextStyle(fontSize: 8, color: Colors.grey)))),
-        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, interval: 1, getTitlesWidget: (v, _) { final i = v.toInt(); return i >= 0 && i < lb.length && v == i.toDouble() ? Padding(padding: const EdgeInsets.only(top: 4), child: Text(lb[i], style: const TextStyle(fontSize: 7, color: Colors.grey))) : const SizedBox.shrink(); })),
-        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)), rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false))),
-      borderData: FlBorderData(show: false), lineBarsData: [LineChartBarData(spots: vl.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.toDouble())).toList(), isCurved: true, color: const Color(0xFF8B5CF6), barWidth: 2,
-        dotData: FlDotData(show: true, getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(radius: 3, color: const Color(0xFF8B5CF6), strokeWidth: 1, strokeColor: Colors.white)),
-        belowBarData: BarAreaData(show: true, color: const Color(0xFF8B5CF6).withOpacity(0.1)))]));
+    
+    const colorTotal = Color(0xFF8B5CF6); // violet-500 seperti web
+    
+    return LineChart(LineChartData(
+      gridData: FlGridData(show: true, drawVerticalLine: false, getDrawingHorizontalLine: (v) => FlLine(color: Colors.grey.withOpacity(0.2), strokeWidth: 1)),
+      titlesData: FlTitlesData(
+        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 32, getTitlesWidget: (v, _) => Text(v.toInt().toString(), style: const TextStyle(fontSize: 10, color: Color(0xFF6B7280))))),
+        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, interval: 1, getTitlesWidget: (v, _) {
+          final i = v.toInt();
+          return i >= 0 && i < lb.length && v == i.toDouble()
+            ? Padding(padding: const EdgeInsets.only(top: 8), child: Text(lb[i], style: const TextStyle(fontSize: 10, color: Color(0xFF6B7280))))
+            : const SizedBox.shrink();
+        })),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      ),
+      borderData: FlBorderData(show: false),
+      lineTouchData: LineTouchData(
+        touchTooltipData: LineTouchTooltipData(
+          getTooltipColor: (_) => const Color(0xFF1F2937),
+          tooltipRoundedRadius: 8,
+          getTooltipItems: (spots) => spots.map((spot) => LineTooltipItem(
+            'Total Aktif: ${spot.y.toInt()} pelanggan',
+            const TextStyle(color: Colors.white, fontSize: 12),
+          )).toList(),
+        ),
+      ),
+      lineBarsData: [
+        LineChartBarData(
+          spots: vl.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.toDouble())).toList(),
+          isCurved: true, curveSmoothness: 0.3,
+          color: colorTotal, barWidth: 3,
+          dotData: FlDotData(show: true, getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(radius: 4, color: colorTotal, strokeWidth: 2, strokeColor: Colors.white)),
+          belowBarData: BarAreaData(show: true, color: colorTotal.withOpacity(0.15)),
+        ),
+      ],
+    ));
   }
 
   double _int(List<num> v) => v.isEmpty ? 1 : (v.reduce((a, b) => a > b ? a : b) / 4).ceilToDouble().clamp(1, double.infinity);
   String _cmp(double v) => v >= 1000000 ? '${(v / 1000000).toStringAsFixed(1)}jt' : v >= 1000 ? '${(v / 1000).toStringAsFixed(0)}rb' : v.toInt().toString();
   Widget _noData() => const Center(child: Text('No data', style: TextStyle(color: Colors.grey, fontSize: 11)));
 
-  Widget _loading() => LayoutBuilder(builder: (context, constraints) {
-    final smallCardWidth = (constraints.maxWidth - 8) / 2;
-    final smallCardHeight = smallCardWidth / 1.45;
-    return Column(children: [
-      _skeletonLargeCard(height: smallCardHeight),
-      const SizedBox(height: 10),
-      GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.15,
-        children: List.generate(6, (_) => _skeletonSmallCard()))]);
-  });
+  // Loading skeleton untuk stats cards
+  Widget _loading() => Column(children: [
+    Shimmer.fromColors(baseColor: Colors.grey[300]!, highlightColor: Colors.grey[100]!,
+      child: Container(height: 100, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)))),
+    const SizedBox(height: 8),
+    GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 1.2,
+      children: List.generate(6, (_) => Shimmer.fromColors(baseColor: Colors.grey[300]!, highlightColor: Colors.grey[100]!,
+        child: Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))))))]);
 
-  Widget _chartsLoading() => Column(children: List.generate(4, (_) => Padding(padding: const EdgeInsets.only(bottom: 12), child: _skeletonChartCard())));
+  // Error widget
+  Widget _error(String msg) => Center(child: Padding(padding: const EdgeInsets.all(20),
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Icon(Icons.error_outline, color: Colors.red, size: 48),
+      const SizedBox(height: 12),
+      const Text('Gagal memuat data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+      const SizedBox(height: 4),
+      Text(msg, style: const TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)])));
 
-  Widget _skeletonLargeCard({required double height}) => Shimmer.fromColors(
-    baseColor: Colors.grey[300]!, highlightColor: Colors.grey[100]!,
-    child: Container(width: double.infinity, height: height,
-      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(16)),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        Container(width: 32, height: 32, decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(8))),
-        const SizedBox(width: 14),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-          Container(width: 50, height: 10, decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(4))),
-          const SizedBox(height: 8),
-          Container(width: 120, height: 18, decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(4)))])),
-        Container(width: 28, height: 28, decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(6)))])));
-
-  Widget _skeletonSmallCard() => Shimmer.fromColors(
-    baseColor: Colors.grey[300]!, highlightColor: Colors.grey[100]!,
-    child: Container(
-      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(14)),
-      padding: const EdgeInsets.all(10),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Container(width: 18, height: 18, decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(4))),
-          Container(width: 20, height: 20, decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(4)))]),
-        const SizedBox(height: 8),
-        Container(width: 60, height: 8, decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(4))),
-        const SizedBox(height: 4),
-        Container(width: 80, height: 12, decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(4)))])));
-
-  Widget _skeletonChartCard() => Shimmer.fromColors(
-    baseColor: Colors.grey[300]!, highlightColor: Colors.grey[100]!,
-    child: Container(height: 200,
-      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(16)),
-      padding: const EdgeInsets.all(12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Container(width: 120, height: 12, decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(4))),
-          Container(width: 60, height: 10, decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(4)))]),
-        const SizedBox(height: 16),
-        Expanded(child: Container(decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(8))))])));
-
-  Widget _error(String m) => Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-    child: Column(children: [const Icon(Icons.error_outline, size: 36, color: Colors.red), const SizedBox(height: 10), const Text('Gagal memuat data', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 4), Text(m, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, color: Colors.grey))]));
+  // Loading skeleton untuk charts
+  Widget _chartsLoading() => Column(children: List.generate(4, (_) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Shimmer.fromColors(baseColor: Colors.grey[300]!, highlightColor: Colors.grey[100]!,
+      child: Container(height: 250, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)))))));
 }
-
-

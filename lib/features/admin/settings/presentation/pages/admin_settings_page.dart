@@ -451,59 +451,11 @@ _____________________________
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Informasi Aplikasi
-          _buildSection('Informasi Aplikasi', Icons.info_outline, [
-            _buildTextField('Nama Aplikasi', _appNameController, 'Selinggonet'),
-            _buildTextField('Nama Pendek', _shortNameController, 'Selinggonet', hint: 'Untuk home screen (max 12 karakter)'),
-            _buildTextField('Deskripsi', _descriptionController, 'Sistem manajemen pelanggan ISP', maxLines: 2),
-            _buildTextField('Tagline', _taglineController, 'Kelola pelanggan dengan mudah', hint: 'Muncul di halaman login'),
-          ]),
-          const SizedBox(height: 16),
-          
-          // Logo & Icon
-          _buildSection('Logo & Icon', Icons.image_outlined, [
-            _buildImageUploader('Logo Besar', _logoUrl, _logoFile, 'Untuk halaman login/register\n512x512px (PNG/JPG)', () => _pickImage('logo')),
-            const SizedBox(height: 12),
-            _buildImageUploader('Favicon', _faviconUrl, _faviconFile, 'Icon browser tab\n32x32px (PNG/ICO)', () => _pickImage('favicon')),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(child: _buildImageUploader('Icon 192px', _icon192Url, _icon192File, 'PWA Icon', () => _pickImage('icon192'), small: true)),
-                const SizedBox(width: 12),
-                Expanded(child: _buildImageUploader('Icon 512px', _icon512Url, _icon512File, 'PWA Icon', () => _pickImage('icon512'), small: true)),
-              ],
-            ),
-          ]),
-          const SizedBox(height: 16),
-          
-          // Kontak
-          _buildSection('Kontak', Icons.phone_outlined, [
-            _buildTextField('Nomor WhatsApp', _whatsappController, '6281234567890', hint: 'Format: 628xxxxxxxxx', keyboardType: TextInputType.phone),
-            _buildTextField('Email Support', _emailController, 'support@selinggonet.com', keyboardType: TextInputType.emailAddress),
-            _buildTextField('Alamat Kantor', _addressController, 'Jl. Contoh No. 123', maxLines: 2),
-          ]),
-          const SizedBox(height: 16),
-          
-          // Pembayaran Offline
-          _buildSection('Pembayaran Offline', Icons.payments_outlined, [
-            _buildTextField('Nama Penerima', _offlineNameController, 'Bapak/Ibu ...'),
-            _buildTextField('Alamat Pembayaran', _offlineAddressController, 'Alamat untuk pembayaran offline', maxLines: 2),
-          ]),
-          const SizedBox(height: 16),
-
           // QRIS Payment
           _buildSection('QRIS Payment', Icons.qr_code, [
             _buildToggle('Tampilkan QRIS', 'Tampilkan QRIS di halaman customer', _showQris, (v) => setState(() => _showQris = v)),
             const SizedBox(height: 12),
             _buildImageUploader('Gambar QRIS', _qrisImageUrl, _qrisFile, 'PNG atau JPG, max 2MB', () => _pickImage('qris')),
-          ]),
-          const SizedBox(height: 16),
-          
-          // Tema PWA
-          _buildSection('Tema PWA', Icons.palette_outlined, [
-            _buildColorPicker('Theme Color', _themeColor, (c) => setState(() => _themeColor = c), 'Warna status bar & header'),
-            const SizedBox(height: 12),
-            _buildColorPicker('Background Color', _backgroundColor, (c) => setState(() => _backgroundColor = c), 'Warna background PWA'),
           ]),
           const SizedBox(height: 16),
           

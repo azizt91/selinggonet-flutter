@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../../data/providers/auth_provider.dart';
+import '../../../../../data/providers/notification_provider.dart';
 
 // Invoice Model
 class InvoiceModel {
@@ -217,9 +218,17 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
                         controller: _searchController,
                         onChanged: _onSearchChanged,
                         style: const TextStyle(fontSize: 16, color: Color(0xFF110E1B)),
-                        decoration: const InputDecoration.collapsed(
+                        cursorColor: const Color(0xFF625095),
+                        decoration: const InputDecoration(
                           hintText: 'Cari tagihan...',
                           hintStyle: TextStyle(color: Color(0xFF625095), fontSize: 16),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                          filled: true,
+                          fillColor: Colors.transparent,
                         ),
                       ),
                     ),
@@ -553,10 +562,20 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
     if (phone.startsWith('0')) phone = '62${phone.substring(1)}';
 
     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-    final message = 'Halo ${invoice.customerName},\n\nIni adalah pengingat tagihan internet Anda:\n\n'
-        'Periode: ${invoice.invoicePeriod}\n'
-        'Jumlah: ${currencyFormat.format(invoice.amount)}\n\n'
-        'Mohon segera melakukan pembayaran. Terima kasih.';
+    final message = 'Informasi Tagihan WiFi Anda\n\n'
+        'Hai Bapak/Ibu ${invoice.customerName},\n'
+        'ID Pelanggan: ${invoice.customerIdpl ?? "-"}\n\n'
+        'Informasi tagihan Bapak/Ibu bulan ini adalah:\n'
+        'Jumlah Tagihan: ${currencyFormat.format(invoice.amount)}\n'
+        'Periode Tagihan: ${invoice.invoicePeriod}\n\n'
+        'Bayar tagihan Anda di salah satu rekening di bawah ini:\n'
+        '• Seabank 901307925714 An. TAUFIQ AZIZ\n'
+        '• BCA 3621053653 An. TAUFIQ AZIZ\n'
+        '• BSI 7211806138 An. TAUFIQ AZIZ\n'
+        '• Dana 089609497390 An. TAUFIQ AZIZ\n\n'
+        'Terima kasih atas kepercayaan Anda menggunakan layanan kami.\n'
+        '_____________________________\n'
+        '*Ini adalah pesan otomatis. Jika telah membayar tagihan, abaikan pesan ini.';
 
     final url = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(message)}');
     if (await canLaunchUrl(url)) {
@@ -688,12 +707,39 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
         ),
       );
 
+      // Add payment notification for admins
+      await _addPaymentNotification(invoice, amount, method, isFullyPaid);
+
       // Send WhatsApp notification if fully paid
       if (isFullyPaid && invoice.customerWhatsapp != null && invoice.customerWhatsapp!.isNotEmpty) {
         await _sendPaymentNotification(invoice, amount, method);
       }
     } catch (e) {
       scaffoldMessenger.showSnackBar(SnackBar(content: Text('Gagal memproses pembayaran: $e'), backgroundColor: const Color(0xFFEF4444)));
+    }
+  }
+
+  Future<void> _addPaymentNotification(InvoiceModel invoice, double amount, String method, bool isFullyPaid) async {
+    try {
+      final supabase = ref.read(supabaseClientProvider);
+      final user = ref.read(currentUserProvider).valueOrNull;
+      final adminName = user?.fullName ?? 'Admin';
+      final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+      
+      // Call RPC function to add payment notification
+      await supabase.rpc('add_payment_notification', params: {
+        'admin_name': adminName,
+        'customer_name': invoice.customerName,
+        'customer_idpl': invoice.customerIdpl ?? '-',
+        'invoice_period': invoice.invoicePeriod,
+        'amount_paid': currencyFormat.format(amount),
+        'payment_method': method,
+      });
+      
+      // Invalidate notification providers to refresh badge
+      ref.invalidate(unreadNotificationCountProvider);
+    } catch (e) {
+      debugPrint('Failed to add payment notification: $e');
     }
   }
 

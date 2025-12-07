@@ -316,11 +316,16 @@ class AdminNotificationsPage extends ConsumerWidget {
                     ),
                   );
                   if (confirm == true) {
-                    // TODO: Implement delete all
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Fitur hapus semua notifikasi')),
-                      );
+                    final user = ref.read(currentUserProvider).valueOrNull;
+                    if (user != null) {
+                      final success = await ref.read(notificationRepositoryProvider).deleteAllNotifications(user.id);
+                      ref.invalidate(notificationsProvider);
+                      ref.invalidate(unreadNotificationCountProvider);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(success ? 'Semua notifikasi berhasil dihapus' : 'Gagal menghapus notifikasi')),
+                        );
+                      }
                     }
                   }
                 },

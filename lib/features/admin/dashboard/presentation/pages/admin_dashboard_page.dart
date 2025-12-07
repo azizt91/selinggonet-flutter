@@ -147,91 +147,88 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
     final year = ref.read(selectedYearProvider);
     return Column(children: [
       _largeCard('Profit', f.format(s.profit), Icons.account_balance_wallet, [const Color(0xFF9969C7), const Color(0xFF6A359C)], _showProfit, () => setState(() => _showProfit = !_showProfit)),
-      const SizedBox(height: 10),
-      GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 1.45, children: [
+      const SizedBox(height: 12),
+      GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.15, children: [
         _smallToggle('Pendapatan', f.format(s.totalRevenue), Icons.trending_up, [const Color(0xFF004e92), const Color(0xFF000428)], _showPendapatan, () => setState(() => _showPendapatan = !_showPendapatan)),
         _smallToggle('Pengeluaran', f.format(s.totalExpenses), Icons.trending_down, [const Color(0xFF485563), const Color(0xFF29323c)], _showPengeluaran, () => setState(() => _showPengeluaran = !_showPengeluaran)),
         _smallCard('Pelanggan Aktif', s.activeCustomers.toString(), Icons.people, [const Color(0xFF1e3c72), const Color(0xFF2a5298)], () => ctx.push('/admin/customers?status=AKTIF')),
-        _smallCard('Tdk Aktif', s.inactiveCustomers.toString(), Icons.person_off, [const Color(0xFF614385), const Color(0xFF516395)], () => ctx.push('/admin/customers?status=NONAKTIF')),
+        _smallCard('Pelanggan Tdk Aktif', s.inactiveCustomers.toString(), Icons.person_off, [const Color(0xFF614385), const Color(0xFF516395)], () => ctx.push('/admin/customers?status=NONAKTIF')),
         _smallCard('Belum Bayar', s.unpaidInvoicesCount.toString(), Icons.schedule, [const Color(0xFF4e4376), const Color(0xFF2b5876)], () => ctx.push('/admin/invoices?status=unpaid&bulan=$month&tahun=$year')),
         _smallCard('Lunas', s.paidInvoicesCount.toString(), Icons.check_circle, [const Color(0xFF141e30), const Color(0xFF243b55)], () => ctx.push('/admin/invoices?status=paid&bulan=$month&tahun=$year')),
       ])]);
   }
 
-  Widget _largeCard(String l, String v, IconData icon, List<Color> g, bool vis, VoidCallback t) => LayoutBuilder(
-    builder: (context, constraints) {
-      final smallCardWidth = (constraints.maxWidth - 8) / 2;
-      final smallCardHeight = smallCardWidth / 1.45;
-      return Container(
-        width: double.infinity,
-        height: smallCardHeight,
-        clipBehavior: Clip.hardEdge,
-        decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: g), borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: g[0].withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 6))]),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          Icon(icon, size: 32, color: Colors.white),
-          const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(l, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 4),
-            Text(vis ? v : 'Rp •••••••', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)])),
-          _eye(vis, t)]));
-    });
+  Widget _largeCard(String l, String v, IconData icon, List<Color> g, bool vis, VoidCallback t) => Container(
+    width: double.infinity,
+    clipBehavior: Clip.hardEdge,
+    decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: g), borderRadius: BorderRadius.circular(20),
+      boxShadow: [BoxShadow(color: g[0].withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 6))]),
+    padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Icon(icon, size: 36, color: Colors.white.withOpacity(0.9)),
+        _eye(vis, t)]),
+      const SizedBox(height: 12),
+      Text(l, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14, fontWeight: FontWeight.w500)),
+      const SizedBox(height: 4),
+      Text(vis ? v : 'Rp •••••••', style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)]));
 
   Widget _smallToggle(String l, String v, IconData icon, List<Color> g, bool vis, VoidCallback t) => Container(
     clipBehavior: Clip.hardEdge,
-    decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: g), borderRadius: BorderRadius.circular(14),
+    decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: g), borderRadius: BorderRadius.circular(16),
       boxShadow: [BoxShadow(color: g[0].withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))]),
-    padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Icon(icon, size: 18, color: Colors.white), _eye(vis, t, s: true)]),
-      const SizedBox(height: 8),
-      Text(l, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 9), maxLines: 1, overflow: TextOverflow.ellipsis),
-      Text(vis ? v : 'Rp •••••••', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)]));
+    padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Icon(icon, size: 28, color: Colors.white.withOpacity(0.9)), _eye(vis, t, s: true)]),
+      const Spacer(),
+      Text(l, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.w500)),
+      const SizedBox(height: 4),
+      Text(vis ? v : 'Rp •••••••', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)]));
 
   Widget _smallCard(String l, String v, IconData icon, List<Color> g, VoidCallback? tap) => GestureDetector(onTap: tap, child: Container(
     clipBehavior: Clip.hardEdge,
-    decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: g), borderRadius: BorderRadius.circular(14),
+    decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: g), borderRadius: BorderRadius.circular(16),
       boxShadow: [BoxShadow(color: g[0].withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))]),
-    padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Icon(icon, size: 18, color: Colors.white), if (tap != null) Icon(Icons.arrow_forward_ios, size: 8, color: Colors.white.withOpacity(0.7))]),
-      const SizedBox(height: 8),
-      Text(l, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 9), maxLines: 1, overflow: TextOverflow.ellipsis),
-      Text(v, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)])));
+    padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Icon(icon, size: 28, color: Colors.white.withOpacity(0.9)), if (tap != null) Icon(Icons.arrow_forward_ios, size: 12, color: Colors.white.withOpacity(0.7))]),
+      const Spacer(),
+      Text(l, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.w500)),
+      const SizedBox(height: 4),
+      Text(v, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+      if (tap != null) ...[const SizedBox(height: 4), Text('👆 Ketuk untuk detail', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 10))]])));
 
-  Widget _eye(bool vis, VoidCallback t, {bool s = false}) => GestureDetector(onTap: t, child: Container(padding: EdgeInsets.all(s ? 3 : 6),
-    decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(6)),
-    child: Icon(vis ? Icons.visibility : Icons.visibility_off, color: Colors.white.withOpacity(0.9), size: s ? 12 : 18)));
+  Widget _eye(bool vis, VoidCallback t, {bool s = false}) => GestureDetector(onTap: t, child: Container(padding: EdgeInsets.all(s ? 6 : 8),
+    decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+    child: Icon(vis ? Icons.visibility : Icons.visibility_off, color: Colors.white.withOpacity(0.9), size: s ? 16 : 20)));
 
   Widget _chartsSection(dynamic d) => d == null ? const SizedBox.shrink() : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    _chartCardWithLegend('Pendapatan, Pengeluaran & Profit', '6 bulan terakhir', SizedBox(height: 180, child: _revenueChart(d)),
+    _chartCardWithLegend('Pendapatan, Pengeluaran & Profit', '6 bulan terakhir', SizedBox(height: 220, child: _revenueChart(d)),
       legends: [('Pendapatan', const Color(0xFF10B981)), ('Pengeluaran', const Color(0xFFEF4444)), ('Profit', const Color(0xFF8B5CF6))]),
-    const SizedBox(height: 12),
-    _chartCard('Status Pembayaran', 'Bulan ini', SizedBox(height: 160, child: _paymentChart(d))),
-    const SizedBox(height: 12),
-    _chartCard('Pertumbuhan Pelanggan', 'Baru vs Cabut', SizedBox(height: 160, child: _growthChart(d))),
-    const SizedBox(height: 12),
-    _chartCard('Total Pelanggan Aktif', 'Kumulatif 6 bulan', SizedBox(height: 160, child: _totalChart(d)))]);
+    const SizedBox(height: 16),
+    _chartCard('Status Pembayaran', 'Bulan ini', SizedBox(height: 200, child: _paymentChart(d))),
+    const SizedBox(height: 16),
+    _chartCard('Pertumbuhan Pelanggan', 'Baru vs Cabut', SizedBox(height: 200, child: _growthChart(d))),
+    const SizedBox(height: 16),
+    _chartCard('Total Pelanggan Aktif', 'Kumulatif 6 bulan', SizedBox(height: 200, child: _totalChart(d)))]);
 
-  Widget _chartCard(String t, String s, Widget c) => Container(padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2))]),
+  Widget _chartCard(String t, String s, Widget c) => Container(padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))]),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Flexible(child: Text(t, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)))),
-        Row(children: [Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)), const SizedBox(width: 4), Text(s, style: const TextStyle(fontSize: 9, color: Color(0xFF6B7280)))])]),
-      const SizedBox(height: 10), c]));
+        Flexible(child: Text(t, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)))),
+        Row(children: [Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)), const SizedBox(width: 6), Text(s, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)))])]),
+      const SizedBox(height: 16), c]));
 
-  Widget _chartCardWithLegend(String t, String s, Widget c, {required List<(String, Color)> legends}) => Container(padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2))]),
+  Widget _chartCardWithLegend(String t, String s, Widget c, {required List<(String, Color)> legends}) => Container(padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))]),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Flexible(child: Text(t, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)))),
-        Text(s, style: const TextStyle(fontSize: 9, color: Color(0xFF6B7280)))]),
-      const SizedBox(height: 6),
-      Wrap(spacing: 12, runSpacing: 4, children: legends.map((l) => Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: l.$2, borderRadius: BorderRadius.circular(2))),
-        const SizedBox(width: 4),
-        Text(l.$1, style: const TextStyle(fontSize: 9, color: Color(0xFF6B7280)))])).toList()),
-      const SizedBox(height: 8), c]));
+        Flexible(child: Text(t, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)))),
+        Text(s, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)))]),
+      const SizedBox(height: 10),
+      Wrap(spacing: 16, runSpacing: 6, children: legends.map((l) => Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: l.$2, borderRadius: BorderRadius.circular(3))),
+        const SizedBox(width: 6),
+        Text(l.$1, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)))])).toList()),
+      const SizedBox(height: 12), c]));
 
   Widget _revenueChart(dynamic d) {
     final lb = d.labels as List<String>? ?? [];
@@ -311,7 +308,7 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
     return Column(children: [
       _skeletonLargeCard(height: smallCardHeight),
       const SizedBox(height: 10),
-      GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 1.45,
+      GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.15,
         children: List.generate(6, (_) => _skeletonSmallCard()))]);
   });
 

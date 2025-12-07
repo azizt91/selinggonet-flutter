@@ -140,9 +140,17 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
                         controller: _searchController,
                         onChanged: _onSearchChanged,
                         style: const TextStyle(fontSize: 16, color: Color(0xFF110E1B)),
-                        decoration: const InputDecoration.collapsed(
+                        cursorColor: const Color(0xFF625095),
+                        decoration: const InputDecoration(
                           hintText: 'Cari pelanggan...',
                           hintStyle: TextStyle(color: Color(0xFF625095), fontSize: 16),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                          filled: true,
+                          fillColor: Colors.transparent,
                         ),
                       ),
                     ),

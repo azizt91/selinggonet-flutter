@@ -122,6 +122,33 @@ class NotificationRepository {
       return false;
     }
   }
+
+  Future<bool> deleteAllNotifications(String userId) async {
+    try {
+      // Get all notifications for this user
+      final notifications = await getNotifications(userId);
+      if (notifications.isEmpty) return true;
+
+      final notificationIds = notifications.map((n) => n.id).toList();
+
+      // Delete all read records for these notifications
+      await _supabase
+          .from('notification_reads')
+          .delete()
+          .inFilter('notification_id', notificationIds);
+
+      // Delete notifications that are for this user or for ADMIN role
+      await _supabase
+          .from('notifications')
+          .delete()
+          .or('recipient_user_id.eq.$userId,and(recipient_role.eq.ADMIN,recipient_user_id.is.null)');
+
+      return true;
+    } catch (e) {
+      print('Error deleting all notifications: $e');
+      return false;
+    }
+  }
 }
 
 // Providers

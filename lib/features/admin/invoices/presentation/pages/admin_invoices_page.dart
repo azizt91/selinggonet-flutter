@@ -21,6 +21,7 @@ class InvoiceModel {
   final String customerId;
   final String? customerIdpl;
   final String? customerWhatsapp;
+  final String? customerEmail;
 
   InvoiceModel({
     required this.id,
@@ -35,6 +36,7 @@ class InvoiceModel {
     required this.customerId,
     this.customerIdpl,
     this.customerWhatsapp,
+    this.customerEmail,
   });
 
   factory InvoiceModel.fromJson(Map<String, dynamic> json) {
@@ -52,6 +54,7 @@ class InvoiceModel {
       customerId: json['customer_id']?.toString() ?? '',
       customerIdpl: profile?['idpl']?.toString(),
       customerWhatsapp: profile?['whatsapp_number']?.toString(),
+      customerEmail: profile?['email']?.toString(),
     );
   }
 }
@@ -65,7 +68,7 @@ final invoicesProvider = FutureProvider.autoDispose<List<InvoiceModel>>((ref) as
   final filter = ref.watch(invoicesFilterProvider);
   final search = ref.watch(invoicesSearchProvider);
 
-  var query = supabase.from('invoices').select('*, profiles(full_name, idpl, whatsapp_number)');
+  var query = supabase.from('invoices').select('*, profiles(full_name, idpl, whatsapp_number, email)');
 
   if (filter == 'unpaid') {
     query = query.eq('status', 'unpaid');
@@ -724,20 +727,19 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
       final supabase = ref.read(supabaseClientProvider);
       final user = ref.read(currentUserProvider).valueOrNull;
       final adminName = user?.fullName ?? 'Admin';
-      final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
       
       // Call RPC function to add payment notification
+      // Parameters must match database function: customer_name, customer_idpl, invoice_period, amount (numeric), admin_name
       await supabase.rpc('add_payment_notification', params: {
-        'admin_name': adminName,
         'customer_name': invoice.customerName,
         'customer_idpl': invoice.customerIdpl ?? '-',
         'invoice_period': invoice.invoicePeriod,
-        'amount_paid': currencyFormat.format(amount),
-        'payment_method': method,
+        'amount': amount, // Send as numeric, not formatted string
+        'admin_name': adminName,
       });
       
       // Invalidate notification providers to refresh badge
-      ref.invalidate(unreadNotificationCountProvider);
+      ref.invalidate(notificationsProvider);
     } catch (e) {
       debugPrint('Failed to add payment notification: $e');
     }
@@ -794,7 +796,8 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
           .replaceAll('{jumlah_dibayar}', currencyFormat.format(amount))
           .replaceAll('{sisa_tagihan}', currencyFormat.format(0))
           .replaceAll('{metode_pembayaran}', methodText)
-          .replaceAll('{app_url}', settings['app_url'] ?? '');
+          .replaceAll('{app_url}', settings['app_url'] ?? '')
+          .replaceAll('{email_pelanggan}', invoice.customerEmail ?? '-');
 
       // Call Supabase Edge Function
       await supabase.functions.invoke('send-whatsapp-notification', body: {

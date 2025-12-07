@@ -123,6 +123,7 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
     final year = ref.read(selectedYearProvider);
     return Column(children: [
       _largeCard('Profit', f.format(s.profit), Icons.account_balance_wallet, [const Color(0xFF9969C7), const Color(0xFF6A359C)], _showProfit, () => setState(() => _showProfit = !_showProfit)),
+      const SizedBox(height: 8),
       GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 1.2, children: [
         _smallToggle('Pendapatan', f.format(s.totalRevenue), Icons.trending_up, [const Color(0xFF004e92), const Color(0xFF000428)], _showPendapatan, () => setState(() => _showPendapatan = !_showPendapatan)),
         _smallToggle('Pengeluaran', f.format(s.totalExpenses), Icons.trending_down, [const Color(0xFF485563), const Color(0xFF29323c)], _showPengeluaran, () => setState(() => _showPengeluaran = !_showPengeluaran)),
@@ -136,7 +137,7 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
   Widget _largeCard(String l, String v, IconData icon, List<Color> g, bool vis, VoidCallback t) => Container(
     width: double.infinity, clipBehavior: Clip.hardEdge,
     decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: g), borderRadius: BorderRadius.circular(16),
-      boxShadow: [BoxShadow(color: g[0].withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))]),
+      boxShadow: [BoxShadow(color: g[0].withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))]),
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Icon(icon, size: 32, color: Colors.white.withOpacity(0.9)), _eye(vis, t)]),
       const SizedBox(height: 8),

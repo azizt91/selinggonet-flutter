@@ -1,28 +1,28 @@
 buildscript {
-    ext.kotlin_version = '1.9.0'
+    ext.kotlin_version = '1.9.22'
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.0'
+        classpath 'com.android.tools.build:gradle:8.3.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
 // Define Flutter properties for plugins
 ext {
-    compileSdkVersion = 34
+    compileSdkVersion = 35
     minSdkVersion = 23
-    targetSdkVersion = 34
+    targetSdkVersion = 35
 }
 
 // Create flutter object for plugin compatibility
 ext.flutter = [
-    compileSdkVersion: 34,
+    compileSdkVersion: 35,
     minSdkVersion: 23,
-    targetSdkVersion: 34,
+    targetSdkVersion: 35,
     ndkVersion: "25.1.8937393"
 ]
 

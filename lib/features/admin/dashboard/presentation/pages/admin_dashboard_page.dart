@@ -77,7 +77,7 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
               loading: () => const SizedBox.shrink(), error: (_, __) => const SizedBox.shrink())]),
           IconButton(icon: const Icon(Icons.logout, color: Colors.white, size: 22), onPressed: _logout, padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36))]),
         const SizedBox(height: 6),
-        Text(DateFormat('d MMMM yyyy', 'id_ID').format(DateTime.now()) + ' pukul ' + DateFormat('HH.mm.ss', 'id_ID').format(DateTime.now()) + ' WIB', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 11)),
+        Text(DateFormat('d MMMM yyyy', 'id_ID').format(DateTime.now()) + ' pukul ' + DateFormat('HH.mm', 'id_ID').format(DateTime.now()) + ' WIB', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 11)),
         const SizedBox(height: 10),
         Row(children: [Expanded(child: _monthFilter(month)), const SizedBox(width: 10), Expanded(child: _yearFilter(year))]),
       ]))));
@@ -125,14 +125,27 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
     return Column(children: [
       _largeCard('Profit', f.format(s.profit), Icons.account_balance_wallet, [const Color(0xFF9969C7), const Color(0xFF6A359C)], _showProfit, () => setState(() => _showProfit = !_showProfit)),
       const SizedBox(height: 8),
-      GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 1.15, children: [
-        _smallToggle('Pendapatan', f.format(s.totalRevenue), Icons.trending_up, [const Color(0xFF004e92), const Color(0xFF000428)], _showPendapatan, () => setState(() => _showPendapatan = !_showPendapatan)),
-        _smallToggle('Pengeluaran', f.format(s.totalExpenses), Icons.trending_down, [const Color(0xFF485563), const Color(0xFF29323c)], _showPengeluaran, () => setState(() => _showPengeluaran = !_showPengeluaran)),
-        _smallCard('Pelanggan Aktif', s.activeCustomers.toString(), Icons.people, [const Color(0xFF1e3c72), const Color(0xFF2a5298)], () => ctx.push('/admin/customers?status=AKTIF')),
-        _smallCard('Pelanggan Tdk Aktif', s.inactiveCustomers.toString(), Icons.person_off, [const Color(0xFF614385), const Color(0xFF516395)], () => ctx.push('/admin/customers?status=NONAKTIF')),
-        _smallCard('Belum Bayar', s.unpaidInvoicesCount.toString(), Icons.schedule, [const Color(0xFF4e4376), const Color(0xFF2b5876)], () => ctx.push('/admin/invoices?status=unpaid&bulan=$month&tahun=$year')),
-        _smallCard('Lunas', s.paidInvoicesCount.toString(), Icons.check_circle, [const Color(0xFF141e30), const Color(0xFF243b55)], () => ctx.push('/admin/invoices?status=paid&bulan=$month&tahun=$year')),
-      ])]);
+      // Row 1: Pendapatan & Pengeluaran
+      IntrinsicHeight(child: Row(children: [
+        Expanded(child: _smallToggle('Pendapatan', f.format(s.totalRevenue), Icons.trending_up, [const Color(0xFF004e92), const Color(0xFF000428)], _showPendapatan, () => setState(() => _showPendapatan = !_showPendapatan))),
+        const SizedBox(width: 8),
+        Expanded(child: _smallToggle('Pengeluaran', f.format(s.totalExpenses), Icons.trending_down, [const Color(0xFF485563), const Color(0xFF29323c)], _showPengeluaran, () => setState(() => _showPengeluaran = !_showPengeluaran))),
+      ])),
+      const SizedBox(height: 8),
+      // Row 2: Pelanggan Aktif & Tidak Aktif
+      IntrinsicHeight(child: Row(children: [
+        Expanded(child: _smallCard('Pelanggan Aktif', s.activeCustomers.toString(), Icons.people, [const Color(0xFF1e3c72), const Color(0xFF2a5298)], () => ctx.push('/admin/customers?status=AKTIF'))),
+        const SizedBox(width: 8),
+        Expanded(child: _smallCard('Pelanggan Tdk Aktif', s.inactiveCustomers.toString(), Icons.person_off, [const Color(0xFF614385), const Color(0xFF516395)], () => ctx.push('/admin/customers?status=NONAKTIF'))),
+      ])),
+      const SizedBox(height: 8),
+      // Row 3: Belum Bayar & Lunas
+      IntrinsicHeight(child: Row(children: [
+        Expanded(child: _smallCard('Belum Bayar', s.unpaidInvoicesCount.toString(), Icons.schedule, [const Color(0xFF4e4376), const Color(0xFF2b5876)], () => ctx.push('/admin/invoices?status=unpaid&bulan=$month&tahun=$year'))),
+        const SizedBox(width: 8),
+        Expanded(child: _smallCard('Lunas', s.paidInvoicesCount.toString(), Icons.check_circle, [const Color(0xFF141e30), const Color(0xFF243b55)], () => ctx.push('/admin/invoices?status=paid&bulan=$month&tahun=$year'))),
+      ])),
+    ]);
   }
 
   Widget _largeCard(String l, String v, IconData icon, List<Color> g, bool vis, VoidCallback t) => Container(

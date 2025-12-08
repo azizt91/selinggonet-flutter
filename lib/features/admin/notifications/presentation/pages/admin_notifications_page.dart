@@ -174,7 +174,9 @@ class AdminNotificationsPage extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        dateFormat.format(notification.createdAt),
+                        notification.createdAt != null 
+                            ? dateFormat.format(notification.createdAt!.toLocal()) 
+                            : '-',
                         style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
                       ),
                     ],

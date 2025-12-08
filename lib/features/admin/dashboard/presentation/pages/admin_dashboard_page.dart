@@ -485,12 +485,29 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
 
   // Loading skeleton untuk stats cards
   Widget _loading() => Column(children: [
+    // Large card skeleton (Profit)
     Shimmer.fromColors(baseColor: Colors.grey[300]!, highlightColor: Colors.grey[100]!,
       child: Container(height: 100, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)))),
     const SizedBox(height: 8),
-    GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 1.2,
-      children: List.generate(6, (_) => Shimmer.fromColors(baseColor: Colors.grey[300]!, highlightColor: Colors.grey[100]!,
-        child: Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))))))]);
+    // Row 1: Pendapatan & Pengeluaran
+    _skeletonRow(),
+    const SizedBox(height: 8),
+    // Row 2: Pelanggan Aktif & Tidak Aktif
+    _skeletonRow(),
+    const SizedBox(height: 8),
+    // Row 3: Belum Bayar & Lunas
+    _skeletonRow(),
+  ]);
+
+  Widget _skeletonRow() => Shimmer.fromColors(
+    baseColor: Colors.grey[300]!, 
+    highlightColor: Colors.grey[100]!,
+    child: Row(children: [
+      Expanded(child: Container(height: 120, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)))),
+      const SizedBox(width: 8),
+      Expanded(child: Container(height: 120, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)))),
+    ]),
+  );
 
   // Error widget
   Widget _error(String msg) => Center(child: Padding(padding: const EdgeInsets.all(20),

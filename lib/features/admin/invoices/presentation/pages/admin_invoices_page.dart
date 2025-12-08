@@ -510,17 +510,52 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
           decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB)))),
           child: Row(
             children: [
+              // Date column for paid tab
+              if (_currentFilter == 'paid') ...[
+                Column(
+                  children: [
+                    Container(width: 32, height: 20, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                    const SizedBox(height: 4),
+                    Container(width: 28, height: 12, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                    const SizedBox(height: 2),
+                    Container(width: 36, height: 12, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                  ],
+                ),
+                const SizedBox(width: 12),
+              ],
+              // Customer info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(width: 150, height: 16, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                    Container(width: 140, height: 16, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
                     const SizedBox(height: 8),
                     Container(width: 100, height: 24, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12))),
                   ],
                 ),
               ),
-              Container(width: 100, height: 36, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8))),
+              // Action buttons based on filter
+              if (_currentFilter == 'unpaid') ...[
+                Container(width: 32, height: 32, margin: const EdgeInsets.only(right: 6), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8))),
+                Container(width: 45, height: 32, margin: const EdgeInsets.only(right: 6), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8))),
+                Container(width: 90, height: 32, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8))),
+              ] else if (_currentFilter == 'installment') ...[
+                Container(width: 32, height: 32, margin: const EdgeInsets.only(right: 6), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8))),
+                Container(width: 45, height: 32, margin: const EdgeInsets.only(right: 6), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8))),
+                Container(width: 55, height: 32, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8))),
+              ] else ...[
+                // Paid tab - status and method
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(width: 50, height: 14, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                    const SizedBox(height: 4),
+                    Container(width: 60, height: 12, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                  ],
+                ),
+                const SizedBox(width: 6),
+                Container(width: 28, height: 28, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+              ],
             ],
           ),
         ),

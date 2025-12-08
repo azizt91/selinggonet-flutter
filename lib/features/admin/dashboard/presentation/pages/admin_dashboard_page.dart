@@ -122,26 +122,10 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
     final month = ref.read(selectedMonthProvider);
     final year = ref.read(selectedYearProvider);
     
-    // Hitung childAspectRatio dinamis untuk menghilangkan space berlebih di Android
-    final size = MediaQuery.of(ctx).size;
-    const int crossAxisCount = 2;
-    const double screenPadding = 16.0 * 2; // padding kiri + kanan
-    const double crossAxisSpacing = 8.0;
-    
-    // Hitung lebar satu kartu
-    double availableWidth = size.width - screenPadding - ((crossAxisCount - 1) * crossAxisSpacing);
-    double cardWidth = availableWidth / crossAxisCount;
-    
-    // Tinggi kartu yang diinginkan (sesuaikan jika perlu)
-    double desiredCardHeight = 135.0;
-    
-    // Hitung aspect ratio dinamis
-    double calculatedAspectRatio = cardWidth / desiredCardHeight;
-    
     return Column(children: [
       _largeCard('Profit', f.format(s.profit), Icons.account_balance_wallet, [const Color(0xFF9969C7), const Color(0xFF6A359C)], _showProfit, () => setState(() => _showProfit = !_showProfit)),
       const SizedBox(height: 8),
-      GridView.count(crossAxisCount: crossAxisCount, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 8, crossAxisSpacing: crossAxisSpacing, childAspectRatio: calculatedAspectRatio, children: [
+      GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 1.15, children: [
         _smallToggle('Pendapatan', f.format(s.totalRevenue), Icons.trending_up, [const Color(0xFF004e92), const Color(0xFF000428)], _showPendapatan, () => setState(() => _showPendapatan = !_showPendapatan)),
         _smallToggle('Pengeluaran', f.format(s.totalExpenses), Icons.trending_down, [const Color(0xFF485563), const Color(0xFF29323c)], _showPengeluaran, () => setState(() => _showPengeluaran = !_showPengeluaran)),
         _smallCard('Pelanggan Aktif', s.activeCustomers.toString(), Icons.people, [const Color(0xFF1e3c72), const Color(0xFF2a5298)], () => ctx.push('/admin/customers?status=AKTIF')),
@@ -168,7 +152,7 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
       boxShadow: [BoxShadow(color: g[0].withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))]),
     padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Icon(icon, size: 28, color: Colors.white.withOpacity(0.9)), _eye(vis, t, s: true)]),
-      const Spacer(),
+      const SizedBox(height: 8),
       Text(l, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.w500)),
       const SizedBox(height: 4),
       Text(vis ? v : 'Rp •••••••', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)]));
@@ -179,7 +163,7 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
       boxShadow: [BoxShadow(color: g[0].withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))]),
     padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Icon(icon, size: 28, color: Colors.white.withOpacity(0.9)), if (tap != null) Icon(Icons.arrow_forward_ios, size: 12, color: Colors.white.withOpacity(0.7))]),
-      const Spacer(),
+      const SizedBox(height: 8),
       Text(l, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.w500)),
       const SizedBox(height: 4),
       Text(v, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),

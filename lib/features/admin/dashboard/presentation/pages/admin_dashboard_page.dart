@@ -152,12 +152,18 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
     width: double.infinity, clipBehavior: Clip.hardEdge,
     decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: g), borderRadius: BorderRadius.circular(16),
       boxShadow: [BoxShadow(color: g[0].withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))]),
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Icon(icon, size: 32, color: Colors.white.withOpacity(0.9)), _eye(vis, t)]),
-      const SizedBox(height: 8),
-      Text(l, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.w500)),
-      const SizedBox(height: 2),
-      Text(vis ? v : 'Rp •••••••', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)]));
+    child: Stack(children: [
+      // Watermark image - positioned center-right
+      Positioned.fill(child: Align(alignment: Alignment.centerRight, child: Padding(padding: const EdgeInsets.only(right: 20), child: Opacity(opacity: 0.15, child: Image.asset('assets/images/sn.png', height: 100, fit: BoxFit.contain))))),
+      // Content
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Icon(icon, size: 32, color: Colors.white.withOpacity(0.9)), _eye(vis, t)]),
+        const SizedBox(height: 8),
+        Text(l, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 2),
+        Text(vis ? v : 'Rp •••••••', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+      ])),
+    ]));
 
   Widget _smallToggle(String l, String v, IconData icon, List<Color> g, bool vis, VoidCallback t) => Container(
     clipBehavior: Clip.hardEdge,

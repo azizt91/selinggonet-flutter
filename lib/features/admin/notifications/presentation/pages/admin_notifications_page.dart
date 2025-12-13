@@ -6,11 +6,39 @@ import 'package:shimmer/shimmer.dart';
 import '../../../../../data/providers/notification_provider.dart';
 import '../../../../../data/providers/auth_provider.dart';
 
-class AdminNotificationsPage extends ConsumerWidget {
+class AdminNotificationsPage extends ConsumerStatefulWidget {
   const AdminNotificationsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminNotificationsPage> createState() => _AdminNotificationsPageState();
+}
+
+class _AdminNotificationsPageState extends ConsumerState<AdminNotificationsPage> {
+  bool _hasMarkedAsRead = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Tandai semua notifikasi sebagai sudah dibaca saat halaman dibuka
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _markAllAsReadOnOpen();
+    });
+  }
+
+  Future<void> _markAllAsReadOnOpen() async {
+    if (_hasMarkedAsRead) return; // Hindari pemanggilan berulang
+    
+    final user = ref.read(currentUserProvider).valueOrNull;
+    if (user != null) {
+      _hasMarkedAsRead = true;
+      await ref.read(notificationRepositoryProvider).markAllAsRead(user.id);
+      ref.invalidate(notificationsProvider);
+      ref.invalidate(unreadNotificationCountProvider);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final notifications = ref.watch(notificationsProvider);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -22,22 +50,22 @@ class AdminNotificationsPage extends ConsumerWidget {
         backgroundColor: const Color(0xFFF9F8FB),
         body: Column(
           children: [
-            _buildHeader(context),
+            _buildHeader(),
             Expanded(
               child: notifications.when(
-                data: (data) => _buildNotificationList(context, ref, data),
+                data: (data) => _buildNotificationList(data),
                 loading: () => _buildLoadingSkeleton(),
                 error: (e, _) => _buildError(e.toString()),
               ),
             ),
-            _buildBottomActions(context, ref),
+            _buildBottomActions(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader() {
     return Container(
       color: Colors.white,
       child: SafeArea(
@@ -69,7 +97,7 @@ class AdminNotificationsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildNotificationList(BuildContext context, WidgetRef ref, List<NotificationModel> notifications) {
+  Widget _buildNotificationList(List<NotificationModel> notifications) {
     if (notifications.isEmpty) {
       return Center(
         child: Column(
@@ -91,12 +119,12 @@ class AdminNotificationsPage extends ConsumerWidget {
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: notifications.length,
-        itemBuilder: (context, index) => _buildNotificationItem(context, ref, notifications[index]),
+        itemBuilder: (_, index) => _buildNotificationItem(notifications[index]),
       ),
     );
   }
 
-  Widget _buildNotificationItem(BuildContext context, WidgetRef ref, NotificationModel notification) {
+  Widget _buildNotificationItem(NotificationModel notification) {
     final dateFormat = DateFormat('dd MMM yyyy, HH:mm', 'id_ID');
 
     return Container(
@@ -251,7 +279,7 @@ class AdminNotificationsPage extends ConsumerWidget {
   }
 
 
-  Widget _buildBottomActions(BuildContext context, WidgetRef ref) {
+  Widget _buildBottomActions() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -260,47 +288,9 @@ class AdminNotificationsPage extends ConsumerWidget {
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () async {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Tandai Semua'),
-                      content: const Text('Tandai semua notifikasi sebagai sudah dibaca?'),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ya')),
-                      ],
-                    ),
-                  );
-                  if (confirm == true) {
-                    final user = ref.read(currentUserProvider).valueOrNull;
-                    if (user != null) {
-                      await ref.read(notificationRepositoryProvider).markAllAsRead(user.id);
-                      ref.invalidate(notificationsProvider);
-                      ref.invalidate(unreadNotificationCountProvider);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Semua notifikasi ditandai sudah dibaca')),
-                        );
-                      }
-                    }
-                  }
-                },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF3B82F6),
-                  side: const BorderSide(color: Color(0xFFDBEAFE)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text('Tandai Semua Dibaca', style: TextStyle(fontSize: 13)),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: OutlinedButton(
+        child: SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
                 onPressed: () async {
                   final confirm = await showDialog<bool>(
                     context: context,
@@ -331,15 +321,13 @@ class AdminNotificationsPage extends ConsumerWidget {
                     }
                   }
                 },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFEF4444),
-                  side: const BorderSide(color: Color(0xFFFEE2E2)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text('Hapus Semua', style: TextStyle(fontSize: 13)),
-              ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFFEF4444),
+              side: const BorderSide(color: Color(0xFFFEE2E2)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
             ),
-          ],
+            child: const Text('Hapus Semua', style: TextStyle(fontSize: 13)),
+          ),
         ),
       ),
     );

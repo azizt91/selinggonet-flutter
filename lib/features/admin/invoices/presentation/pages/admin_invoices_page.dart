@@ -59,11 +59,13 @@ class InvoiceModel {
 // Providers
 final invoicesFilterProvider = StateProvider<String>((ref) => 'unpaid');
 final invoicesSearchProvider = StateProvider<String>((ref) => '');
+final invoicesPeriodFilterProvider = StateProvider<String?>((ref) => null); // Filter periode: "Desember 2025"
 
 final invoicesProvider = FutureProvider.autoDispose<List<InvoiceModel>>((ref) async {
   final supabase = ref.read(supabaseClientProvider);
   final filter = ref.watch(invoicesFilterProvider);
   final search = ref.watch(invoicesSearchProvider);
+  final periodFilter = ref.watch(invoicesPeriodFilterProvider);
 
   var query = supabase.from('invoices').select('*, profiles(full_name, idpl, whatsapp_number)');
 
@@ -73,6 +75,11 @@ final invoicesProvider = FutureProvider.autoDispose<List<InvoiceModel>>((ref) as
     query = query.eq('status', 'partially_paid');
   } else if (filter == 'paid') {
     query = query.eq('status', 'paid');
+  }
+
+  // Filter berdasarkan periode jika ada (dari dashboard)
+  if (periodFilter != null && periodFilter.isNotEmpty) {
+    query = query.eq('invoice_period', periodFilter);
   }
 
   // Sort by paid_at for paid invoices (newest payment first), otherwise by created_at
@@ -113,6 +120,16 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
       _currentFilter = widget.initialStatusFilter!;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(invoicesFilterProvider.notifier).state = widget.initialStatusFilter!;
+        
+        // Set period filter jika bulan dan tahun diberikan
+        if (widget.initialMonth != null && widget.initialMonth! > 0 && widget.initialYear != null) {
+          final namaBulan = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+          final periodFilter = '${namaBulan[widget.initialMonth!]} ${widget.initialYear}';
+          ref.read(invoicesPeriodFilterProvider.notifier).state = periodFilter;
+        } else {
+          // Reset period filter jika tidak ada filter bulan/tahun
+          ref.read(invoicesPeriodFilterProvider.notifier).state = null;
+        }
       });
     }
   }
@@ -176,6 +193,8 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
   }
 
   Widget _buildHeader() {
+    final periodFilter = ref.watch(invoicesPeriodFilterProvider);
+    
     return Container(
       color: const Color(0xFFF9F8FB),
       child: SafeArea(
@@ -186,6 +205,37 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
               padding: EdgeInsets.fromLTRB(40, 16, 40, 8),
               child: Text('Tagihan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF110E1B))),
             ),
+            // Period filter info (jika ada filter dari dashboard)
+            if (periodFilter != null && periodFilter.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF683FE4).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF683FE4).withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.filter_alt, size: 16, color: Color(0xFF683FE4)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Filter: $periodFilter',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF683FE4)),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          ref.read(invoicesPeriodFilterProvider.notifier).state = null;
+                        },
+                        child: const Icon(Icons.close, size: 18, color: Color(0xFF683FE4)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             // Filter Pills
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),

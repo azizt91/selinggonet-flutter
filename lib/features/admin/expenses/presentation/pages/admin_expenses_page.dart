@@ -7,7 +7,7 @@ import '../../../../../data/providers/auth_provider.dart';
 
 // Expense Model
 class ExpenseModel {
-  final int id;
+  final String id; // UUID dari database
   final String description;
   final double amount;
   final DateTime expenseDate;
@@ -23,7 +23,7 @@ class ExpenseModel {
 
   factory ExpenseModel.fromJson(Map<String, dynamic> json) {
     return ExpenseModel(
-      id: json['id'] is int ? json['id'] : int.tryParse(json['id'].toString()) ?? 0,
+      id: json['id']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
       expenseDate: json['expense_date'] != null 
@@ -771,7 +771,7 @@ class _AdminExpensesPageState extends ConsumerState<AdminExpensesPage> {
                     return;
                   }
 
-                  await _updateExpense(expense.id, descController.text.trim(), amount, selectedDate);
+                  await _updateExpense(expense.id.toString(), descController.text.trim(), amount, selectedDate);
                   if (ctx.mounted) Navigator.pop(ctx, true);
                 },
                 style: ElevatedButton.styleFrom(
@@ -814,7 +814,7 @@ class _AdminExpensesPageState extends ConsumerState<AdminExpensesPage> {
     );
 
     if (confirm == true) {
-      await _deleteExpense(expense.id);
+      await _deleteExpense(expense.id.toString());
     }
   }
 
@@ -848,7 +848,7 @@ class _AdminExpensesPageState extends ConsumerState<AdminExpensesPage> {
   }
 
   // Update expense
-  Future<void> _updateExpense(int id, String description, double amount, DateTime date) async {
+  Future<void> _updateExpense(String id, String description, double amount, DateTime date) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     
     try {
@@ -877,7 +877,7 @@ class _AdminExpensesPageState extends ConsumerState<AdminExpensesPage> {
   }
 
   // Delete expense
-  Future<void> _deleteExpense(int id) async {
+  Future<void> _deleteExpense(String id) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     
     try {

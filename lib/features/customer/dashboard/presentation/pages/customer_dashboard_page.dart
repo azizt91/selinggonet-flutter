@@ -326,8 +326,10 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
   }
 
   Widget _buildPaketAktifCard(BuildContext context, user) {
-    final packageName = user.package?.packageName ?? 'Tidak ada paket';
-    final isActive = user.status == 'AKTIF';
+    final installationDate = user.installationDate;
+    final dateFormat = DateFormat('dd MMMM yyyy', 'id_ID');
+    final formattedDate =
+        installationDate != null ? dateFormat.format(installationDate) : '-';
 
     return Card(
       elevation: 2,
@@ -337,23 +339,14 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Paket Aktif', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                Row(
-                  children: [
-                    Icon(Icons.wifi, color: isActive ? AppColors.primary : Colors.red, size: 20),
-                    const SizedBox(width: 4),
-                    Text(isActive ? 'Terhubung' : 'Nonaktif', style: TextStyle(color: isActive ? AppColors.primary : Colors.red, fontWeight: FontWeight.bold, fontSize: 14)),
-                  ],
-                ),
-              ],
-            ),
+            const Text('Anda Berlangganan Sejak',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             const Divider(),
             const SizedBox(height: 12),
-            Text(packageName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(formattedDate,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
       ),

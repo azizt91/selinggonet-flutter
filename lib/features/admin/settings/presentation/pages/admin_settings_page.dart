@@ -117,14 +117,13 @@ class WhatsAppSettingsModel {
 class GenieACSSettingsModel {
   final bool enabled;
   final String url;
-  final String username;
-  final String password;
+  // NOTE: username/password are NOT stored here. They live in
+  // Supabase Edge Function Secrets (GENIEACS_USERNAME /
+  // GENIEACS_PASSWORD) and are used server-side by genieacs-proxy.
 
   GenieACSSettingsModel({
     this.enabled = false,
     this.url = '',
-    this.username = '',
-    this.password = '',
   });
 }
 
@@ -177,21 +176,17 @@ final genieacsSettingsProvider = FutureProvider.autoDispose<GenieACSSettingsMode
     
     bool enabled = false;
     String url = '';
-    String username = '';
-    String password = '';
-    
+
     for (final row in response) {
       final key = row['setting_key']?.toString() ?? '';
       final value = row['setting_value']?.toString() ?? '';
       switch (key) {
         case 'genieacs_enabled': enabled = value == 'true'; break;
         case 'genieacs_url': url = value; break;
-        case 'genieacs_username': username = value; break;
-        case 'genieacs_password': password = value; break;
       }
     }
-    
-    return GenieACSSettingsModel(enabled: enabled, url: url, username: username, password: password);
+
+    return GenieACSSettingsModel(enabled: enabled, url: url);
   } catch (e) {
     return GenieACSSettingsModel();
   }
@@ -224,8 +219,6 @@ class _AdminSettingsPageState extends ConsumerState<AdminSettingsPage> {
 
   // GenieACS Settings Controllers
   final _genieacsUrlController = TextEditingController();
-  final _genieacsUsernameController = TextEditingController();
-  final _genieacsPasswordController = TextEditingController();
   
   // State
   bool _showQris = true;
@@ -234,7 +227,6 @@ class _AdminSettingsPageState extends ConsumerState<AdminSettingsPage> {
   bool _isSaving = false;
   bool _isLoaded = false;
   bool _showFonnteToken = false;
-  bool _showGenieacsPassword = false;
   
   Color _themeColor = const Color(0xFF683FE4);
   Color _backgroundColor = const Color(0xFFF9F8FB);
@@ -271,8 +263,6 @@ class _AdminSettingsPageState extends ConsumerState<AdminSettingsPage> {
     _templateInstallmentController.dispose();
     _templateCustomController.dispose();
     _genieacsUrlController.dispose();
-    _genieacsUsernameController.dispose();
-    _genieacsPasswordController.dispose();
     super.dispose();
   }
 
@@ -317,8 +307,6 @@ class _AdminSettingsPageState extends ConsumerState<AdminSettingsPage> {
   void _populateGenieACSSettings(GenieACSSettingsModel settings) {
     _genieacsEnabled = settings.enabled;
     _genieacsUrlController.text = settings.url;
-    _genieacsUsernameController.text = settings.username;
-    _genieacsPasswordController.text = settings.password;
   }
 
   Color _hexToColor(String hex) {
@@ -484,9 +472,18 @@ _____________________________
           _buildSection('Konfigurasi GenieACS', Icons.router_outlined, [
             _buildToggle('Aktifkan GenieACS', 'Izinkan pelanggan mengganti SSID & Password WiFi', _genieacsEnabled, (v) => setState(() => _genieacsEnabled = v)),
             const SizedBox(height: 12),
-            _buildTextField('URL GenieACS', _genieacsUrlController, 'http://192.168.1.10:7547', hint: 'URL server GenieACS Anda'),
-            _buildTextField('Username (Opsional)', _genieacsUsernameController, 'Kosongkan jika tidak ada autentikasi'),
-            _buildPasswordField('Password (Opsional)', _genieacsPasswordController, 'Kosongkan jika tidak ada autentikasi', _showGenieacsPassword, () => setState(() => _showGenieacsPassword = !_showGenieacsPassword)),
+            _buildTextField('URL GenieACS', _genieacsUrlController, 'http://121.101.134.146:7557', hint: 'URL NBI GenieACS (port 7557, bukan 7547)'),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.amber[50], borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.amber[200]!)),
+              child: Row(
+                children: [
+                  Icon(Icons.lock_outline, size: 16, color: Colors.amber[800]),
+                  const SizedBox(width: 8),
+                  const Expanded(child: Text('Username & password GenieACS diatur di Supabase Dashboard > Edge Functions > Secrets (GENIEACS_USERNAME / GENIEACS_PASSWORD), bukan di sini.', style: TextStyle(fontSize: 12, color: Color(0xFF92400E)))),
+                ],
+              ),
+            ),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.blue[200]!)),
@@ -890,11 +887,12 @@ _____________________________
       }
 
       // Save GenieACS Settings
+      // Only non-sensitive keys are saved here. Credentials live
+      // in Edge Function Secrets; writing them to this table is
+      // blocked by RLS.
       final genieSettings = [
         {'setting_key': 'genieacs_enabled', 'setting_value': _genieacsEnabled ? 'true' : 'false'},
         {'setting_key': 'genieacs_url', 'setting_value': _genieacsUrlController.text.trim()},
-        {'setting_key': 'genieacs_username', 'setting_value': _genieacsUsernameController.text.trim()},
-        {'setting_key': 'genieacs_password', 'setting_value': _genieacsPasswordController.text.trim()},
       ];
 
       for (final setting in genieSettings) {

@@ -91,8 +91,9 @@ class GenieAcsConfig {
     return {
       'genieacs_enabled': enabled.toString(),
       'genieacs_url': url,
-      'genieacs_username': username,
-      'genieacs_password': password,
+      // NOTE: genieacs_username / genieacs_password are intentionally
+      // NOT written back. They live in Edge Function Secrets and the
+      // RLS policy on genieacs_settings rejects writing them.
     };
   }
 }

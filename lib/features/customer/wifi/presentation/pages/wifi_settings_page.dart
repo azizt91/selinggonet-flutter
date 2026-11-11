@@ -90,19 +90,17 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
       final settingsResponse = await supabase
           .from('genieacs_settings')
           .select('setting_key, setting_value')
-          .inFilter('setting_key', ['genieacs_url', 'genieacs_username', 'genieacs_password']);
+          .inFilter('setting_key', ['genieacs_url']);
       
+      // Only genieacs_url is read from the table. The GenieACS
+      // username/password live in Edge Function Secrets and are used
+      // server-side by genieacs-proxy; they must never be read into
+      // the app or sent from the client.
       String? genieacsUrl;
-      String? username;
-      String? password;
 
       for (final item in settingsResponse) {
         if (item['setting_key'] == 'genieacs_url') {
           genieacsUrl = item['setting_value'];
-        } else if (item['setting_key'] == 'genieacs_username') {
-          username = item['setting_value'];
-        } else if (item['setting_key'] == 'genieacs_password') {
-          password = item['setting_value'];
         }
       }
       
@@ -114,10 +112,9 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
         return;
       }
 
-      // Prepare auth credentials
-      final auth = (username != null && username.isNotEmpty && password != null && password.isNotEmpty)
-          ? {'username': username, 'password': password}
-          : null;
+      // No `auth` is sent: the proxy verifies the JWT, checks the
+      // IP against the server-side profile, and uses the GenieACS
+      // credentials from Edge Function Secrets.
 
       // Build query URL
       final query = {
@@ -135,7 +132,6 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
         body: {
           'url': targetUrl,
           'method': 'GET',
-          if (auth != null) 'auth': auth,
         },
       );
 
@@ -208,19 +204,17 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
       final settingsResponse = await supabase
           .from('genieacs_settings')
           .select('setting_key, setting_value')
-          .inFilter('setting_key', ['genieacs_url', 'genieacs_username', 'genieacs_password']);
+          .inFilter('setting_key', ['genieacs_url']);
       
+      // Only genieacs_url is read from the table. The GenieACS
+      // username/password live in Edge Function Secrets and are used
+      // server-side by genieacs-proxy; they must never be read into
+      // the app or sent from the client.
       String? genieacsUrl;
-      String? username;
-      String? password;
 
       for (final item in settingsResponse) {
         if (item['setting_key'] == 'genieacs_url') {
           genieacsUrl = item['setting_value'];
-        } else if (item['setting_key'] == 'genieacs_username') {
-          username = item['setting_value'];
-        } else if (item['setting_key'] == 'genieacs_password') {
-          password = item['setting_value'];
         }
       }
       
@@ -231,10 +225,9 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
         return;
       }
 
-      // Prepare auth credentials
-      final auth = (username != null && username.isNotEmpty && password != null && password.isNotEmpty)
-          ? {'username': username, 'password': password}
-          : null;
+      // No `auth` is sent: the proxy verifies the JWT, checks the
+      // IP against the server-side profile, and uses the GenieACS
+      // credentials from Edge Function Secrets.
 
       // Build query URL
       final query = {
@@ -252,7 +245,6 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
         body: {
           'url': targetUrl,
           'method': 'GET',
-          if (auth != null) 'auth': auth,
         },
       );
 
@@ -1228,28 +1220,23 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
       final settingsResponse = await supabase
           .from('genieacs_settings')
           .select('setting_key, setting_value')
-          .inFilter('setting_key', ['genieacs_url', 'genieacs_username', 'genieacs_password']);
+          .inFilter('setting_key', ['genieacs_url']);
       
+      // Only genieacs_url is read from the table. The GenieACS
+      // username/password live in Edge Function Secrets and are used
+      // server-side by genieacs-proxy; they must never be read into
+      // the app or sent from the client.
       String? genieacsUrl;
-      String? username;
-      String? password;
 
       for (final item in settingsResponse) {
         if (item['setting_key'] == 'genieacs_url') {
           genieacsUrl = item['setting_value'];
-        } else if (item['setting_key'] == 'genieacs_username') {
-          username = item['setting_value'];
-        } else if (item['setting_key'] == 'genieacs_password') {
-          password = item['setting_value'];
         }
       }
 
       if (genieacsUrl == null || genieacsUrl.isEmpty) {
         return {'success': false, 'message': 'URL GenieACS tidak dikonfigurasi'};
       }
-      final auth = (username != null && username.isNotEmpty && password != null && password.isNotEmpty)
-          ? {'username': username, 'password': password}
-          : null;
 
       // Step 1: Get device ID
       final query = {
@@ -1266,7 +1253,6 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
         body: {
           'url': queryUrl,
           'method': 'GET',
-          if (auth != null) 'auth': auth,
         },
       );
 
@@ -1291,8 +1277,7 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
           body: {
             'url': ssidUrl,
             'method': 'POST',
-            if (auth != null) 'auth': auth,
-            'body': {
+              'body': {
               'name': 'setParameterValues',
               'parameterValues': [
                 [ssidPath, newSsid, 'xsd:string']
@@ -1312,8 +1297,7 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
           body: {
             'url': passwordUrl,
             'method': 'POST',
-            if (auth != null) 'auth': auth,
-            'body': {
+              'body': {
               'name': 'setParameterValues',
               'parameterValues': [
                 [passwordPath, newPassword, 'xsd:string']

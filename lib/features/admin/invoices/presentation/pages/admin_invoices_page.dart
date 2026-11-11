@@ -411,8 +411,18 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
               onTap: () => _showPaymentDialog(invoice, isInstallment: false),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                margin: const EdgeInsets.only(right: 6),
                 decoration: BoxDecoration(color: const Color(0xFF683FE4), borderRadius: BorderRadius.circular(8)),
                 child: Text(currencyFormat.format(invoice.amount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+              ),
+            ),
+            // Delete button
+            GestureDetector(
+              onTap: () => _confirmDeleteInvoice(invoice),
+              child: Container(
+                width: 32, height: 32,
+                decoration: BoxDecoration(color: const Color(0xFFEF4444), borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.delete, color: Colors.white, size: 16),
               ),
             ),
           ] else if (_currentFilter == 'installment') ...[
@@ -441,8 +451,18 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
               onTap: () => _showPaymentDialog(invoice, isInstallment: false),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                margin: const EdgeInsets.only(right: 6),
                 decoration: BoxDecoration(color: const Color(0xFF22C55E), borderRadius: BorderRadius.circular(8)),
                 child: const Text('Lunas', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+              ),
+            ),
+            // Delete button
+            GestureDetector(
+              onTap: () => _confirmDeleteInvoice(invoice),
+              child: Container(
+                width: 32, height: 32,
+                decoration: BoxDecoration(color: const Color(0xFFEF4444), borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.delete, color: Colors.white, size: 16),
               ),
             ),
           ],
@@ -522,6 +542,15 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
               width: 28, height: 28,
               alignment: Alignment.center,
               child: const Icon(Icons.replay, color: Color(0xFFF97316), size: 18),
+            ),
+          ),
+          // Delete button
+          GestureDetector(
+            onTap: () => _confirmDeleteInvoice(invoice),
+            child: Container(
+              width: 28, height: 28,
+              alignment: Alignment.center,
+              child: const Icon(Icons.delete, color: Color(0xFFEF4444), size: 18),
             ),
           ),
         ],
@@ -1049,6 +1078,79 @@ class _AdminInvoicesPageState extends ConsumerState<AdminInvoicesPage> {
     } catch (e) {
       scaffoldMessenger.showSnackBar(
         SnackBar(content: Text('Gagal membatalkan pembayaran: $e'), backgroundColor: const Color(0xFFEF4444)),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteInvoice(InvoiceModel invoice) async {
+    final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final statusLabel = invoice.status == 'paid'
+        ? 'LUNAS'
+        : invoice.status == 'partially_paid'
+            ? 'CICILAN'
+            : 'BELUM DIBAYAR';
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Tagihan', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Yakin ingin menghapus tagihan ini?'),
+            const SizedBox(height: 12),
+            Text('Pelanggan: ${invoice.customerName}', style: const TextStyle(fontWeight: FontWeight.w500)),
+            Text('Periode: ${invoice.invoicePeriod}'),
+            Text('Status: $statusLabel'),
+            Text('Jumlah: ${currencyFormat.format(invoice.totalDue)}'),
+            if (invoice.amountPaid > 0)
+              Text('Sudah dibayar: ${currencyFormat.format(invoice.amountPaid)}'),
+            const SizedBox(height: 12),
+            const Text(
+              'Tagihan akan dihapus PERMANEN beserta seluruh riwayat pembayarannya dan tidak dapat dikembalikan.',
+              style: TextStyle(color: Color(0xFFEF4444), fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    try {
+      final supabase = ref.read(supabaseClientProvider);
+
+      // .select('id') detects a silent RLS no-op: an empty result
+      // means nothing was deleted (e.g. not logged in as admin).
+      final deleted = await supabase
+          .from('invoices')
+          .delete()
+          .eq('id', invoice.id)
+          .select('id');
+
+      if (deleted.isEmpty) {
+        throw Exception('Tidak ada tagihan yang terhapus. Pastikan Anda login sebagai admin.');
+      }
+
+      ref.invalidate(invoicesProvider);
+
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('Tagihan berhasil dihapus'), backgroundColor: Color(0xFF22C55E)),
+      );
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Gagal menghapus tagihan: $e'), backgroundColor: const Color(0xFFEF4444)),
       );
     }
   }

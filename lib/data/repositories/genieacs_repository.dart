@@ -28,10 +28,15 @@ class GenieAcsRepository {
     return GenieAcsConfig.fromSettings(settings);
   }
 
-  /// Save GenieACS settings
+  /// Save GenieACS settings.
+  /// Credential keys (genieacs_username / genieacs_password) are
+  /// never written: they live in Edge Function Secrets and the RLS
+  /// policy rejects writing them anyway.
   Future<void> saveSettings(GenieAcsConfig config) async {
     try {
-      final settingsMap = config.toSettingsMap();
+      final settingsMap = config.toSettingsMap()
+        ..remove('genieacs_username')
+        ..remove('genieacs_password');
 
       for (final entry in settingsMap.entries) {
         // Try to update first
@@ -58,8 +63,15 @@ class GenieAcsRepository {
     }
   }
 
-  /// Update a single setting
+  /// Update a single setting.
+  /// Credential keys are refused here; they are managed as Edge
+  /// Function Secrets, not as rows in genieacs_settings.
   Future<void> updateSetting(String key, String value) async {
+    if (key == 'genieacs_username' || key == 'genieacs_password') {
+      throw Exception(
+        'Kredensial GenieACS diatur lewat Edge Function Secrets, bukan dari aplikasi.',
+      );
+    }
     try {
       final updateResponse = await _supabase
           .from('genieacs_settings')

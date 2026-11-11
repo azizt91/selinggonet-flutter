@@ -30,13 +30,28 @@ class _CustomerScaffoldState extends State<CustomerScaffold> {
     return 0;
   }
 
+  BottomNavigationBarItem _navItem(IconData icon, String label, int index) {
+    final isActive = _getSelectedIndex() == index;
+    return BottomNavigationBarItem(
+      icon: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.customerBlueSoft : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Icon(icon),
+      ),
+      label: label,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light, // For iOS
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark, // For iOS
       ),
       child: Scaffold(
       key: _scaffoldKey,
@@ -60,27 +75,17 @@ class _CustomerScaffoldState extends State<CustomerScaffold> {
           }
         },
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: Colors.grey,
+        backgroundColor: Colors.white,
+        elevation: 8,
+        selectedItemColor: AppColors.customerBlue,
+        unselectedItemColor: const Color(0xFF9CA3AF),
         selectedFontSize: 12,
         unselectedFontSize: 12,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'Riwayat',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.help_outline),
-            label: 'Bantuan',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+        items: [
+          _navItem(Icons.home, 'Home', 0),
+          _navItem(Icons.history, 'Riwayat', 1),
+          _navItem(Icons.help_outline, 'Bantuan', 2),
+          _navItem(Icons.person, 'Akun', 3),
         ],
       ),
       ),

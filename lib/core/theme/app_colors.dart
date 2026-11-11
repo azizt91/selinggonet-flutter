@@ -6,6 +6,11 @@ class AppColors {
   static const Color primaryDark = Color(0xFF5A4BAF);
   static const Color primaryLight = Color(0xFF8A7AED);
 
+  // Customer (Starlite-style) Colors
+  static const Color customerBlue = Color(0xFF2563EB);
+  static const Color customerBlueDark = Color(0xFF1E40AF);
+  static const Color customerBlueSoft = Color(0xFFE8EFFD);
+
   // Secondary Colors
   static const Color secondary = Color(0xFF6C757D);
   static const Color secondaryLight = Color(0xFF9CA3AF);

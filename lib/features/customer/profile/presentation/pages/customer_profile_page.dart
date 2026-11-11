@@ -39,7 +39,7 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
     final userAsync = ref.watch(currentUserProvider);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFFF4F7FE),
       body: userAsync.when(
         data: (user) {
           if (user == null) {
@@ -64,33 +64,27 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
   }
 
   Widget _buildProfileView(user) {
-    return Column(
-      children: [
-        // Header
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Text(
-                'Profile',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF110E1B),
-                ),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Blue gradient header
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 48),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1E40AF), Color(0xFF2563EB)],
               ),
-            ],
-          ),
-        ),
-
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(28),
+                bottomRight: Radius.circular(28),
+              ),
+            ),
+            child: Row(
               children: [
-                const SizedBox(height: 16),
-                
-                // Avatar with edit button
+                // Avatar (tap to change photo, same as before)
                 GestureDetector(
                   onTap: () async {
                     await _pickAndUploadImage(user);
@@ -98,133 +92,201 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
                   child: Stack(
                     children: [
                       Container(
-                        width: 128,
-                        height: 128,
-                        decoration: BoxDecoration(
+                        width: 64,
+                        height: 64,
+                        decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.grey[300],
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          color: Colors.white,
                         ),
                         child: ClipOval(
-                          child: _buildAvatarContent(user),
+                          child: _buildAvatarContent(user, fontSize: 24),
                         ),
                       ),
                       Positioned(
-                        bottom: 4,
-                        right: 4,
+                        bottom: 0,
+                        right: 0,
                         child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
                           ),
                           child: const Icon(
                             Icons.edit,
-                            size: 18,
-                            color: Color(0xFF625095),
+                            size: 12,
+                            color: Color(0xFF1E40AF),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                
-                const SizedBox(height: 16),
-                
-                // Name and Email
-                Text(
-                  user.fullName ?? 'Pelanggan',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF110E1B),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  user.email ?? '',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFF625095),
-                  ),
-                ),
-                
-                const SizedBox(height: 32),
-                
-                // Menu Items
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                const SizedBox(width: 16),
+                Expanded(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildMenuItem(
-                        icon: Icons.edit,
-                        title: 'Edit Profile',
-                        onTap: () {
-                          setState(() {
-                            _isEditing = true;
-                          });
-                        },
+                      Text(
+                        user.fullName ?? 'Pelanggan',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      _buildMenuItem(
-                        icon: Icons.wifi,
-                        title: 'Pengaturan WiFi',
-                        onTap: () {
-                          context.go('/customer/wifi');
-                        },
+                      const SizedBox(height: 2),
+                      Text(
+                        user.idpl ?? '',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.85),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                
-                const SizedBox(height: 24),
-                
-                // Logout Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: _handleLogout,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'Logout',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: 100),
               ],
             ),
           ),
-        ),
-      ],
+
+          // Account settings card, overlapping the header
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, -28, 16, 0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: Text(
+                    'Pengaturan Akun',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF110E1B)),
+                  ),
+                ),
+                _buildMenuItem(
+                  icon: Icons.person_outline,
+                  title: 'Edit Profile',
+                  onTap: () {
+                    setState(() {
+                      _isEditing = true;
+                    });
+                  },
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                _buildMenuItem(
+                  icon: Icons.wifi,
+                  title: 'Pengaturan WiFi',
+                  onTap: () {
+                    context.go('/customer/wifi');
+                  },
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                _buildMenuItem(
+                  icon: Icons.help_outline,
+                  title: 'Bantuan & FAQ',
+                  onTap: () {
+                    context.go('/customer/help');
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Help Center card
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: Text(
+                    'Help Center',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF110E1B)),
+                  ),
+                ),
+                _buildMenuItem(
+                  icon: Icons.help_outline,
+                  title: 'FAQ',
+                  onTap: () {
+                    context.go('/customer/help/faq-wifi-modem');
+                  },
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                _buildMenuItem(
+                  icon: Icons.chat_bubble_outline,
+                  title: 'Hubungi Customer Services',
+                  onTap: () {
+                    context.go('/customer/help');
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Logout Button
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _handleLogout,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.customerBlue,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Logout',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 32),
+          const Center(
+            child: Text(
+              'Selinggonet v 2.0.0',
+              style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+            ),
+          ),
+          const SizedBox(height: 100),
+        ],
+      ),
     );
   }
 
@@ -542,15 +604,15 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
     );
   }
 
-  Widget _buildAvatarContent(user) {
+  Widget _buildAvatarContent(user, {double fontSize = 48}) {
     final photoUrl = _uploadedPhotoUrl ?? user.photoUrl;
-    
+
     if (photoUrl != null && photoUrl.isNotEmpty && photoUrl.startsWith('http')) {
       return Image.network(
         photoUrl,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          return _buildInitialsAvatar(user);
+          return _buildInitialsAvatar(user, fontSize: fontSize);
         },
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
@@ -560,19 +622,19 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
         },
       );
     }
-    
-    return _buildInitialsAvatar(user);
+
+    return _buildInitialsAvatar(user, fontSize: fontSize);
   }
 
-  Widget _buildInitialsAvatar(user) {
+  Widget _buildInitialsAvatar(user, {double fontSize = 48}) {
     final initials = (user.fullName ?? 'P').substring(0, 1).toUpperCase();
     return Container(
       color: const Color(0xFF6A5ACD),
       child: Center(
         child: Text(
           initials,
-          style: const TextStyle(
-            fontSize: 48,
+          style: TextStyle(
+            fontSize: fontSize,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
@@ -588,36 +650,23 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[200]!),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            Icon(icon, color: Colors.grey[500]),
+            Icon(icon, color: const Color(0xFF6B7280), size: 22),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w500,
                   color: Color(0xFF110E1B),
                 ),
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.grey[400]),
+            const Icon(Icons.chevron_right, color: Color(0xFF9CA3AF)),
           ],
         ),
       ),

@@ -384,13 +384,13 @@ class _CustomerInvoicesPageState extends ConsumerState<CustomerInvoicesPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 32),
-                const Icon(
+                Icon(
                   Icons.history,
                   size: 96,
                   color: Colors.grey[300],
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Belum ada riwayat pembayaran',
                   style: TextStyle(
                     fontSize: 16,

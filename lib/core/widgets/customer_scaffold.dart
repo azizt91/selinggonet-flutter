@@ -23,10 +23,12 @@ class _CustomerScaffoldState extends State<CustomerScaffold> {
   int _getSelectedIndex() {
     if (widget.currentRoute.contains('/customer/dashboard')) return 0;
     if (widget.currentRoute.contains('/customer/invoices')) return 1;
-    if (widget.currentRoute.contains('/customer/help')) return 2;
+    // Akun mencakup profil, WiFi, info bayar, dan bantuan (bantuan
+    // dibuka dari menu Akun, dan tombol back-nya kembali ke Akun).
     if (widget.currentRoute.contains('/customer/profile') ||
         widget.currentRoute.contains('/customer/wifi') ||
-        widget.currentRoute.contains('/customer/payment-info')) return 3;
+        widget.currentRoute.contains('/customer/payment-info') ||
+        widget.currentRoute.contains('/customer/help')) return 2;
     return 0;
   }
 
@@ -67,9 +69,6 @@ class _CustomerScaffoldState extends State<CustomerScaffold> {
               context.go('/customer/invoices');
               break;
             case 2:
-              context.go('/customer/help');
-              break;
-            case 3:
               context.go('/customer/profile');
               break;
           }
@@ -84,8 +83,7 @@ class _CustomerScaffoldState extends State<CustomerScaffold> {
         items: [
           _navItem(Icons.home, 'Home', 0),
           _navItem(Icons.history, 'Riwayat', 1),
-          _navItem(Icons.help_outline, 'Bantuan', 2),
-          _navItem(Icons.person, 'Akun', 3),
+          _navItem(Icons.person, 'Akun', 2),
         ],
       ),
       ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/utils/due_date_helper.dart';
 import '../../../../../data/models/invoice_model.dart';
 import '../../../../../data/providers/auth_provider.dart';
 import '../providers/dashboard_provider.dart';
@@ -92,7 +93,7 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF110E1B)),
                   ),
                   TextButton(
-                    onPressed: () => context.go(Uri(path: '/customer/invoices', queryParameters: {'tab': '0'}).toString()),
+                    onPressed: () => context.go('/customer/invoices'),
                     child: const Text('Lihat Semua', style: TextStyle(color: AppColors.customerBlue, fontWeight: FontWeight.w600)),
                   ),
                 ],
@@ -198,14 +199,11 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
     final packagePrice = user.package?.price ??
         (paidInvoices.isNotEmpty ? paidInvoices.first.amount : 0.0);
 
-    DateTime? dueDate;
-    if (unpaidInvoices.isNotEmpty) {
-      final sorted = [...unpaidInvoices]..sort((a, b) => (a.dueDate ?? DateTime(0)).compareTo(b.dueDate ?? DateTime(0)));
-      dueDate = sorted.first.dueDate;
-    } else if (paidInvoices.isNotEmpty) {
-      dueDate = paidInvoices.first.dueDate;
-    }
-
+    // Tanggal jatuh tempo TIDAK ditampilkan di kartu ini: nilai
+    // invoices.due_date di database diisi tanggal 10 bulan berikutnya
+    // oleh create_monthly_invoices_v2(), bukan tanggal pasang.
+    // Jatuh tempo yang benar tampil di bawah, pada tiap tagihan
+    // belum dibayar (dihitung dari tanggal pasang).
     final isPaid = unpaidInvoices.isEmpty;
     final latestPaid = paidInvoices.isNotEmpty ? paidInvoices.first : null;
     final statusRaw = (user.status as String?)?.toLowerCase() ?? 'active';
@@ -289,10 +287,10 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('Tanggal Jatuh Tempo', style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
+                          const Text('Tanggal Pembayaran', style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
                           const SizedBox(height: 2),
                           Text(
-                            dueDate != null ? dateFormat.format(dueDate) : '-',
+                            latestPaid?.paidAt != null ? dateFormat.format(latestPaid!.paidAt!) : '-',
                             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF110E1B)),
                           ),
                         ],
@@ -301,36 +299,17 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
                   ],
                 ),
                 const Divider(height: 28),
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Status Pembayaran', style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
-                          const SizedBox(height: 2),
-                          Text(
-                            isPaid ? 'LUNAS' : 'BELUM DIBAYAR',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: isPaid ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          const Text('Tanggal Pembayaran', style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
-                          const SizedBox(height: 2),
-                          Text(
-                            latestPaid?.paidAt != null ? dateFormat.format(latestPaid!.paidAt!) : '-',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF110E1B)),
-                          ),
-                        ],
+                    const Text('Status Pembayaran', style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
+                    const SizedBox(height: 2),
+                    Text(
+                      isPaid ? 'LUNAS' : 'BELUM DIBAYAR',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isPaid ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
                       ),
                     ),
                   ],
@@ -352,6 +331,7 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
 
   Widget _buildTunggakanCard(BuildContext context, WidgetRef ref, List<InvoiceModel> unpaidInvoices, user) {
     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final dateFormat = DateFormat('d MMM yyyy', 'id_ID');
     final totalTunggakan = unpaidInvoices.fold(0.0, (sum, i) => sum + i.amount);
 
     return Container(
@@ -376,32 +356,44 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
           const SizedBox(height: 4),
           Text('${unpaidInvoices.length} tagihan belum dibayar', style: const TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.w500)),
           const SizedBox(height: 16),
-          ...unpaidInvoices.take(2).map((invoice) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(8)),
-                      child: const Icon(Icons.receipt_long, color: Colors.red, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Tagihan ${invoice.invoicePeriod}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        const Text('Belum Dibayar', style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ],
-                ),
-                Text(currencyFormat.format(invoice.amount), style: const TextStyle(fontWeight: FontWeight.w600)),
-              ],
-            ),
-          )),
+          ...unpaidInvoices.take(2).map((invoice) {
+            // Jatuh tempo mengikuti tanggal pasang, bukan due_date database.
+            final due = dueDateForInvoice(
+              installationDate: user.installationDate,
+              invoicePeriod: invoice.invoicePeriod,
+              fallbackDueDate: invoice.dueDate,
+            );
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(8)),
+                        child: const Icon(Icons.receipt_long, color: Colors.red, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Tagihan ${invoice.invoicePeriod}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          const Text('Belum Dibayar', style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.w600)),
+                          Text(
+                            'Jatuh tempo ${due != null ? dateFormat.format(due) : '-'}',
+                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Text(currencyFormat.format(invoice.amount), style: const TextStyle(fontWeight: FontWeight.w600)),
+                ],
+              ),
+            );
+          }),
           const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,

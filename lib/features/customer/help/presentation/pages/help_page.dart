@@ -87,7 +87,7 @@ class _HelpPageState extends ConsumerState<HelpPage> {
                     child: Row(
                       children: [
                         InkWell(
-                          onTap: () => context.go('/customer/dashboard'), // Go back to dashboard or pop
+                          onTap: () => context.go('/customer/profile'), // Kembali ke menu Akun
                           borderRadius: BorderRadius.circular(20),
                           child: const Padding(
                             padding: EdgeInsets.all(8.0),

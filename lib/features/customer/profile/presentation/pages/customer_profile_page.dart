@@ -39,7 +39,10 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
     final userAsync = ref.watch(currentUserProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FE),
+      // Biru, supaya status bar (ikon putih) terlihat: area status bar
+      // menampilkan warna background Scaffold ini. Isi halaman tetap
+      // berlatar terang lewat Container di bawah.
+      backgroundColor: const Color(0xFF1E40AF),
       body: userAsync.when(
         data: (user) {
           if (user == null) {
@@ -54,11 +57,20 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
           }
 
           return SafeArea(
-            child: _isEditing ? _buildEditView(user) : _buildProfileView(user),
+            child: Container(
+              color: const Color(0xFFF4F7FE),
+              child: _isEditing ? _buildEditView(user) : _buildProfileView(user),
+            ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+        loading: () => Container(
+              color: const Color(0xFFF4F7FE),
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+        error: (error, stack) => Container(
+              color: const Color(0xFFF4F7FE),
+              child: Center(child: Text('Error: $error')),
+            ),
       ),
     );
   }
@@ -203,51 +215,6 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
             ),
           ),
 
-          const SizedBox(height: 16),
-
-          // Help Center card
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
-                  child: Text(
-                    'Help Center',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF110E1B)),
-                  ),
-                ),
-                _buildMenuItem(
-                  icon: Icons.help_outline,
-                  title: 'FAQ',
-                  onTap: () {
-                    context.go('/customer/help/faq-wifi-modem');
-                  },
-                ),
-                const Divider(height: 1, indent: 16, endIndent: 16),
-                _buildMenuItem(
-                  icon: Icons.chat_bubble_outline,
-                  title: 'Hubungi Customer Services',
-                  onTap: () {
-                    context.go('/customer/help');
-                  },
-                ),
-              ],
-            ),
-          ),
-
           const SizedBox(height: 24),
 
           // Logout Button
@@ -255,7 +222,7 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 56,
               child: ElevatedButton(
                 onPressed: _handleLogout,
                 style: ElevatedButton.styleFrom(
@@ -519,7 +486,7 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: 48,
+                        height: 56,
                         child: OutlinedButton(
                           onPressed: _isLoading ? null : () {
                             showDialog(
@@ -563,7 +530,7 @@ class _CustomerProfilePageState extends ConsumerState<CustomerProfilePage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: SizedBox(
-                        height: 48,
+                        height: 56,
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _saveProfile,
                           style: ElevatedButton.styleFrom(

@@ -18,12 +18,10 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
   final _formKey = GlobalKey<FormState>();
   final _ssidController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _passwordMismatch = false;
-  
+
   String? _currentSsid;
   String? _currentPassword;
   String? _currentIp;
@@ -37,22 +35,12 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
   void initState() {
     super.initState();
     _loadData();
-    
-    // Add listener for password confirmation
-    _confirmPasswordController.addListener(() {
-      setState(() {
-        _passwordMismatch = _passwordController.text.isNotEmpty &&
-            _confirmPasswordController.text.isNotEmpty &&
-            _passwordController.text != _confirmPasswordController.text;
-      });
-    });
   }
 
   @override
   void dispose() {
     _ssidController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -169,6 +157,13 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
           _currentSsid = ssid;
           _currentPassword = wifiPassword;
         });
+
+        // Isi form dengan nilai saat ini, seperti halaman web, supaya
+        // pelanggan tinggal edit lalu SIMPAN.
+        bool isRealValue(String v) => v.isNotEmpty &&
+            !['Tidak dapat diambil', 'Device tidak ditemukan', 'Gagal mengambil data'].contains(v);
+        if (isRealValue(ssid)) _ssidController.text = ssid;
+        if (isRealValue(wifiPassword)) _passwordController.text = wifiPassword;
       } else {
         setState(() {
           _currentSsid = 'Device tidak ditemukan';
@@ -671,7 +666,7 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
                   TextFormField(
                     controller: _ssidController,
                     decoration: InputDecoration(
-                      hintText: 'Contoh: WiFi-Rumah-Saya (opsional)',
+                      hintText: 'Nama WiFi baru',
                       hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -687,13 +682,7 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
                     ),
                     maxLength: 32,
                   ),
-                  Text(
-                    'Kosongkan jika tidak ingin mengganti SSID',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[400],
-                    ),
-                  ),
+
                 ],
               ),
               
@@ -716,7 +705,7 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
-                      hintText: 'Minimal 8 karakter (opsional)',
+                      hintText: 'Password baru, minimal 8 karakter',
                       hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -743,64 +732,12 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
                     ),
                   ),
                   Text(
-                    'Kosongkan jika tidak ingin mengganti password. Minimal 8 karakter jika diisi.',
+                    'Isi yang mau diganti saja. Kosongkan jika tidak ingin diubah.',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey[400],
                     ),
                   ),
-                ],
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Confirm Password Field
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Konfirmasi Password',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF110E1B),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _confirmPasswordController,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      hintText: 'Ketik ulang password (jika diisi)',
-                      hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: _passwordMismatch ? Colors.red : const Color(0xFFD6D0E7),
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: _passwordMismatch ? Colors.red : const Color(0xFFD6D0E7),
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.all(12),
-                    ),
-                  ),
-                  if (_passwordMismatch)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 4),
-                      child: Text(
-                        'Password tidak cocok',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ),
                 ],
               ),
               
@@ -813,7 +750,7 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleSubmit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF683FE4),
+                    backgroundColor: AppColors.customerBlue,
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: Colors.grey[300],
                     shape: RoundedRectangleBorder(
@@ -1046,9 +983,8 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
   Future<void> _handleSubmit() async {
     final newSsid = _ssidController.text.trim();
     final newPassword = _passwordController.text;
-    final confirmPassword = _confirmPasswordController.text;
 
-    // Validation
+    // Validation (sama seperti web: tanpa konfirmasi password)
     if (newSsid.isEmpty && newPassword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1059,26 +995,14 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
       return;
     }
 
-    if (newPassword.isNotEmpty || confirmPassword.isNotEmpty) {
-      if (newPassword != confirmPassword) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password tidak cocok'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-        return;
-      }
-
-      if (newPassword.length < 8) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password minimal 8 karakter'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-        return;
-      }
+    if (newPassword.isNotEmpty && newPassword.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password minimal 8 karakter'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
     }
 
     final user = ref.read(currentUserProvider).value;
@@ -1168,10 +1092,9 @@ class _WifiSettingsPageState extends ConsumerState<WifiSettingsPage> {
             ),
           );
 
-          // Clear form
-          _ssidController.clear();
-          _passwordController.clear();
-          _confirmPasswordController.clear();
+          // Muat ulang info WiFi saat ini (form terisi lagi dengan
+          // nilai baru, seperti halaman web)
+          await _loadCurrentWifiInfo();
 
           // Reload data
           await _loadChangeHistory();

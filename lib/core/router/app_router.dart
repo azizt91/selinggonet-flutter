@@ -119,11 +119,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/customer/invoices',
             builder: (context, state) {
-              final tab = state.uri.queryParameters['tab'];
               final invoiceId = state.uri.queryParameters['invoiceId'];
-              final initialTabIndex = tab != null ? int.tryParse(tab) ?? 0 : 0;
               return CustomerInvoicesPage(
-                initialTabIndex: initialTabIndex,
                 highlightInvoiceId: invoiceId,
               );
             },

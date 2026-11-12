@@ -3,20 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/utils/due_date_helper.dart';
 import '../../../../../data/providers/auth_provider.dart';
 import '../../../../../data/providers/invoice_provider.dart';
 import '../../../../../data/models/invoice_model.dart';
 import '../../../../../data/models/profile_model.dart';
-import '../../../payment/presentation/widgets/payment_modal.dart';
 import '../widgets/invoice_detail_modal.dart';
 
 class CustomerInvoicesPage extends ConsumerStatefulWidget {
-  final int initialTabIndex;
   final String? highlightInvoiceId;
 
   const CustomerInvoicesPage({
     super.key,
-    this.initialTabIndex = 0,
     this.highlightInvoiceId,
   });
 
@@ -24,23 +22,13 @@ class CustomerInvoicesPage extends ConsumerStatefulWidget {
   ConsumerState<CustomerInvoicesPage> createState() => _CustomerInvoicesPageState();
 }
 
-class _CustomerInvoicesPageState extends ConsumerState<CustomerInvoicesPage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _CustomerInvoicesPageState extends ConsumerState<CustomerInvoicesPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-      length: 2,
-      vsync: this,
-      initialIndex: widget.initialTabIndex,
-    );
-    _tabController.addListener(() {
-      setState(() {}); // Rebuild to update tab styles
-    });
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
@@ -73,7 +61,6 @@ class _CustomerInvoicesPageState extends ConsumerState<CustomerInvoicesPage>
 
   @override
   void dispose() {
-    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -123,25 +110,6 @@ class _CustomerInvoicesPageState extends ConsumerState<CustomerInvoicesPage>
                         ),
                       ),
 
-                      // Tabs
-                      Container(
-                        decoration: const BoxDecoration(
-                          border: Border(bottom: BorderSide(color: Color(0xFFD6D1E6))),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _buildTabButton(0, 'Dibayar'),
-                            ),
-                            const SizedBox(width: 32),
-                            Expanded(
-                              child: _buildTabButton(1, 'Belum Dibayar'),
-                            ),
-                          ],
-                        ),
-                      ),
-
                       // Search Bar
                       Padding(
                         padding: const EdgeInsets.all(16),
@@ -169,9 +137,7 @@ class _CustomerInvoicesPageState extends ConsumerState<CustomerInvoicesPage>
                                 child: TextField(
                                   controller: _searchController,
                                   decoration: InputDecoration(
-                                    hintText: _tabController.index == 1
-                                        ? 'Cari tagihan belum dibayar...'
-                                        : 'Cari riwayat pembayaran...',
+                                    hintText: 'Cari riwayat pembayaran...',
                                     hintStyle: const TextStyle(color: Color(0xFF625095)),
                                     border: InputBorder.none,
                                     enabledBorder: InputBorder.none,
@@ -194,21 +160,11 @@ class _CustomerInvoicesPageState extends ConsumerState<CustomerInvoicesPage>
                 Expanded(
                   child: invoicesAsync.when(
                     data: (invoices) {
-                      // Filter logic
-                      final unpaid = invoices.where((i) =>
-                          i.status == 'unpaid' ||
-                          i.status == 'partially_paid' ||
-                          i.status == 'installment').toList();
-                      
+                      // Hanya tagihan yang sudah dibayar; tagihan belum
+                      // dibayar tampil di Home (kartu tunggakan).
                       final paid = invoices.where((i) => i.status == 'paid').toList();
 
-                      return TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildInvoiceList(paid, true, user, invoices),
-                          _buildInvoiceList(unpaid, false, user, invoices),
-                        ],
-                      );
+                      return _buildInvoiceList(paid, user, invoices);
                     },
                     loading: () => const Center(child: CircularProgressIndicator()),
                     error: (e, s) => Center(child: Text('Error: $e')),
@@ -233,14 +189,25 @@ class _CustomerInvoicesPageState extends ConsumerState<CustomerInvoicesPage>
         (invoices.isNotEmpty ? invoices.first.amount : 0.0);
     final speedMbps = user.package?.speedMbps;
 
+    // Jatuh tempo mengikuti tanggal pasang, bukan invoices.due_date
+    // (di database diisi tanggal 10 bulan berikutnya oleh
+    // create_monthly_invoices_v2()).
     DateTime? dueDate;
+    InvoiceModel? dueInvoice;
     final unpaid = invoices.where((i) => i.status == 'unpaid' || i.status == 'partially_paid').toList();
     if (unpaid.isNotEmpty) {
       final sorted = [...unpaid]..sort((a, b) => (a.dueDate ?? DateTime(0)).compareTo(b.dueDate ?? DateTime(0)));
-      dueDate = sorted.first.dueDate;
+      dueInvoice = sorted.first;
     } else if (invoices.isNotEmpty) {
       final sorted = [...invoices]..sort((a, b) => (b.dueDate ?? DateTime(0)).compareTo(a.dueDate ?? DateTime(0)));
-      dueDate = sorted.first.dueDate;
+      dueInvoice = sorted.first;
+    }
+    if (dueInvoice != null) {
+      dueDate = dueDateForInvoice(
+        installationDate: user.installationDate,
+        invoicePeriod: dueInvoice.invoicePeriod,
+        fallbackDueDate: dueInvoice.dueDate,
+      );
     }
 
     String sisaHariText = '-';
@@ -381,34 +348,7 @@ class _CustomerInvoicesPageState extends ConsumerState<CustomerInvoicesPage>
     );
   }
 
-  Widget _buildTabButton(int index, String text) {
-    final isActive = _tabController.index == index;
-    return InkWell(
-      onTap: () => _tabController.animateTo(index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 13),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: isActive ? AppColors.customerBlue : Colors.transparent,
-              width: 3,
-            ),
-          ),
-        ),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: isActive ? const Color(0xFF110E1B) : const Color(0xFF625095),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInvoiceList(List<InvoiceModel> invoices, bool isPaidTab, user, List<InvoiceModel> allInvoices) {
+  Widget _buildInvoiceList(List<InvoiceModel> invoices, user, List<InvoiceModel> allInvoices) {
     // Filter by search query
     final filteredInvoices = invoices.where((invoice) {
       final period = (invoice.invoicePeriod ?? '').toLowerCase();
@@ -416,14 +356,8 @@ class _CustomerInvoicesPageState extends ConsumerState<CustomerInvoicesPage>
       return period.contains(_searchQuery) || amount.contains(_searchQuery);
     }).toList();
 
-    // Sort logic
-    if (isPaidTab) {
-      filteredInvoices.sort((a, b) => (b.paidAt ?? DateTime(0)).compareTo(a.paidAt ?? DateTime(0)));
-    } else {
-      // Sort unpaid by period desc (assuming period string is comparable or use created_at if available)
-      // For now, let's rely on the order from DB or basic string compare
-      filteredInvoices.sort((a, b) => (b.invoicePeriod ?? '').compareTo(a.invoicePeriod ?? ''));
-    }
+    // Urutkan dari pembayaran terbaru
+    filteredInvoices.sort((a, b) => (b.paidAt ?? DateTime(0)).compareTo(a.paidAt ?? DateTime(0)));
 
     // Summary card + banner scroll together with the list, like the
     // reference design; tabs and search stay fixed above.
@@ -450,16 +384,14 @@ class _CustomerInvoicesPageState extends ConsumerState<CustomerInvoicesPage>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 32),
-                Icon(
-                  isPaidTab ? Icons.history : Icons.receipt_long,
+                const Icon(
+                  Icons.history,
                   size: 96,
                   color: Colors.grey[300],
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  isPaidTab
-                      ? 'Belum ada riwayat pembayaran'
-                      : 'Tidak ada tagihan belum dibayar',
+                const Text(
+                  'Belum ada riwayat pembayaran',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -479,164 +411,83 @@ class _CustomerInvoicesPageState extends ConsumerState<CustomerInvoicesPage>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ...headerWidgets,
-          ...filteredInvoices.map((invoice) => _buildInvoiceItem(invoice, isPaidTab, user)),
+          ...filteredInvoices.map((invoice) => _buildInvoiceItem(invoice, user)),
         ],
       ),
     );
   }
 
-  Widget _buildInvoiceItem(InvoiceModel invoice, bool isPaidTab, user) {
+  Widget _buildInvoiceItem(InvoiceModel invoice, user) {
     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
     final period = invoice.invoicePeriod ?? 'Periode tidak tersedia';
 
-    if (isPaidTab) {
-      // Paid Item Style
-      final paidDate = invoice.paidAt != null
-          ? DateFormat('d MMMM yyyy', 'id_ID').format(invoice.paidAt!)
-          : 'Tanggal tidak tersedia';
-      final amount = (invoice.amountPaid ?? 0) > 0 ? invoice.amountPaid! : invoice.amount;
+    // Paid Item Style
+    final paidDate = invoice.paidAt != null
+        ? DateFormat('d MMMM yyyy', 'id_ID').format(invoice.paidAt!)
+        : 'Tanggal tidak tersedia';
+    final amount = (invoice.amountPaid ?? 0) > 0 ? invoice.amountPaid! : invoice.amount;
 
-      return InkWell(
-        onTap: () => _showInvoiceDetail(invoice, user),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.green[50],
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Pembayaran $period',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        paidDate,
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Text(
-                currencyFormat.format(amount),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    } else {
-      // Unpaid Item Style
-      final dueDate = invoice.dueDate != null
-          ? DateFormat('d MMMM yyyy', 'id_ID').format(invoice.dueDate!)
-          : 'Tanggal tidak tersedia';
-      final amount = invoice.remainingAmount > 0 ? invoice.remainingAmount : invoice.amount;
-
-      return Container(
-        margin: const EdgeInsets.only(bottom: 0), // Border bottom style
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: const BoxDecoration(
-          color: Color(0xFFF9F8FB),
-          border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+    return InkWell(
+      onTap: () => _showInvoiceDetail(invoice, user),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    period,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF110E1B),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    shape: BoxShape.circle,
                   ),
-                  Text(
-                    currencyFormat.format(amount),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.red,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            SizedBox(
-              height: 32,
-              child: ElevatedButton(
-                onPressed: () => _showPaymentModal(context, [invoice], user),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.customerBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  child: const Icon(Icons.check_circle, color: Colors.green, size: 20),
                 ),
-                child: const Text('Bayar'),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pembayaran $period',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      paidDate,
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            Text(
+              currencyFormat.format(amount),
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
               ),
             ),
           ],
         ),
-      );
-    }
-  }
-
-  void _showPaymentModal(BuildContext context, List<InvoiceModel> invoices, user) {
-    final totalAmount = invoices.fold(0.0, (sum, i) => sum + (i.remainingAmount > 0 ? i.remainingAmount : i.amount));
-    final periods = invoices.map((i) => i.invoicePeriod).join(', ');
-    final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => PaymentModal(
-        totalAmount: totalAmount,
-        periods: periods,
-        formattedAmount: currencyFormat.format(totalAmount),
-        user: user,
       ),
     );
   }
